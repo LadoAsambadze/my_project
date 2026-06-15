@@ -16,7 +16,9 @@ access token + rotating refresh token.
 | Auth     | JWT access token + rotating refresh token (cookie / secure store) |
 
 Package manager: **pnpm**. Three apps live side by side: `backend/`,
-`frontend/`, and `mobile/`.
+`frontend/`, and `mobile/`. A shared **design system** lives in `design/`:
+tokens defined once in `design/tokens.json` and generated into web CSS variables
+and a mobile TS theme (`node design/generate.mjs`). See `design/README.md`.
 
 ## Prerequisites
 

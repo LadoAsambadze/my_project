@@ -1,11 +1,13 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Button } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 
 export default function Home() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const displayName = user?.name?.trim() || user?.email || 'there';
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -35,6 +37,12 @@ export default function Home() {
         ))}
 
         <View style={styles.logoutWrap}>
+          <Button
+            title="View design system"
+            variant="secondary"
+            onPress={() => router.push('/(app)/design-system')}
+          />
+          <View style={{ height: spacing.sm }} />
           <Button title="Log out" variant="ghost" onPress={logout} />
         </View>
       </ScrollView>

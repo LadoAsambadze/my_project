@@ -1,157 +1,30 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type TextInputProps,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, spacing } from '@/theme';
+// Barrel for the mobile design-system components. Screens import from
+// '@/components/ui'. Tokens behind these come from design/tokens.json.
+export { Text, Heading, Subtle } from './Text';
+export type { TextProps, TextVariant, TextTone } from './Text';
 
-export function Screen({ children }: { children: React.ReactNode }) {
-  return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <View style={styles.screenInner}>{children}</View>
-    </SafeAreaView>
-  );
-}
+export { Button } from './Button';
+export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
 
-export function Heading({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.heading}>{children}</Text>;
-}
+export { Input, Field } from './Input';
+export type { InputProps } from './Input';
 
-export function Subtle({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.subtle}>{children}</Text>;
-}
+export { Screen, ErrorText } from './Screen';
+export type { ScreenProps } from './Screen';
 
-interface FieldProps extends TextInputProps {
-  label: string;
-}
+export { Card } from './Card';
+export type { CardProps } from './Card';
 
-export function Field({ label, style, ...props }: FieldProps) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        placeholderTextColor={colors.textMuted}
-        style={[styles.input, style]}
-        {...props}
-      />
-    </View>
-  );
-}
+export { Avatar } from './Avatar';
+export type { AvatarProps, AvatarSize } from './Avatar';
 
-interface ButtonProps {
-  title: string;
-  onPress: () => void;
-  loading?: boolean;
-  disabled?: boolean;
-  variant?: 'primary' | 'ghost';
-}
+export { Badge } from './Badge';
+export type { BadgeProps, BadgeTone } from './Badge';
 
-export function Button({
-  title,
-  onPress,
-  loading,
-  disabled,
-  variant = 'primary',
-}: ButtonProps) {
-  const isGhost = variant === 'ghost';
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
-        styles.button,
-        isGhost && styles.buttonGhost,
-        (disabled || loading) && styles.buttonDisabled,
-        pressed && styles.buttonPressed,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={isGhost ? colors.text : colors.primaryText} />
-      ) : (
-        <Text style={[styles.buttonText, isGhost && styles.buttonTextGhost]}>
-          {title}
-        </Text>
-      )}
-    </Pressable>
-  );
-}
+export { Divider } from './Divider';
 
-export function ErrorText({ children }: { children: React.ReactNode }) {
-  if (!children) return null;
-  return <Text style={styles.error}>{children}</Text>;
-}
+export { ListItem } from './ListItem';
+export type { ListItemProps } from './ListItem';
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  screenInner: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  heading: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  subtle: {
-    color: colors.textMuted,
-    fontSize: 15,
-    marginBottom: spacing.lg,
-  },
-  field: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    color: colors.textMuted,
-    fontSize: 13,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    color: colors.text,
-    fontSize: 16,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  buttonGhost: {
-    backgroundColor: 'transparent',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  buttonText: {
-    color: colors.primaryText,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonTextGhost: {
-    color: colors.textMuted,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: 14,
-    marginBottom: spacing.md,
-  },
-});
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';
