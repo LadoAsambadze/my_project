@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: event_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: event
+      POSTGRES_PASSWORD: event
+      POSTGRES_DB: event
+    ports:
+      # Host 5433 -> container 5432 (5432 is taken by a local Postgres install)
+      - "5433:5432"
+    volumes:
+      - event_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U event -d event"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  event_pgdata:
