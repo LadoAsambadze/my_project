@@ -32,6 +32,9 @@ type Mutation {
   """
   refreshToken(token: String): AuthPayload!
   register(input: RegisterInput!): AuthPayload!
+
+  """Update the signed-in user's profile."""
+  updateProfile(input: UpdateProfileInput!): User!
 }
 
 type Query {
@@ -44,10 +47,20 @@ input RegisterInput {
   password: String!
 }
 
+input UpdateProfileInput {
+  avatarUrl: String
+  bio: String
+  location: String
+  name: String
+}
+
 type User {
+  avatarUrl: String
+  bio: String
   createdAt: DateTime!
   email: String!
   id: ID!
+  location: String
   name: String
   updatedAt: DateTime!
 }
