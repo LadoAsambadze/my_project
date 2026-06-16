@@ -22,11 +22,11 @@ export default function Home() {
   async function onLogout() {
     setLoggingOut(true);
     try {
+      // On success the auth gate navigates away and unmounts this screen, so we
+      // deliberately don't toast or reset state here (it would run post-unmount).
       await logout();
-      toast.success('Signed out');
     } catch {
       toast.error('Could not sign out');
-    } finally {
       setLoggingOut(false);
     }
   }

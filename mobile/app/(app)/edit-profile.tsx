@@ -25,6 +25,7 @@ import {
   Textarea,
   useToast,
 } from '@/components/ui';
+import type { UpdateProfileInput } from '@/lib/graphql/operations';
 import { colors, spacing } from '@/theme';
 
 interface FieldErrors {
@@ -49,6 +50,25 @@ export default function EditProfile() {
   const clearError = (key: keyof FieldErrors) =>
     setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
 
+  // Send only the fields that actually changed. An empty string is meaningful
+  // (it clears the field on the backend), so compare trimmed values against the
+  // current user rather than unconditionally sending everything.
+  function buildInput(): UpdateProfileInput {
+    const input: UpdateProfileInput = {};
+    const next = {
+      name: name.trim(),
+      bio: bio.trim(),
+      location: location.trim(),
+      avatarUrl: avatarUrl.trim(),
+    };
+    if (next.name !== (user?.name ?? '')) input.name = next.name;
+    if (next.bio !== (user?.bio ?? '')) input.bio = next.bio;
+    if (next.location !== (user?.location ?? '')) input.location = next.location;
+    if (next.avatarUrl !== (user?.avatarUrl ?? ''))
+      input.avatarUrl = next.avatarUrl;
+    return input;
+  }
+
   async function onSave() {
     const { valid, errors: nextErrors } = runValidators({
       name: () => validateName(name),
@@ -59,15 +79,16 @@ export default function EditProfile() {
     setErrors(nextErrors);
     if (!valid) return;
 
+    const input = buildInput();
+    if (Object.keys(input).length === 0) {
+      toast.info('No changes to save');
+      router.back();
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // Send trimmed values; empty string clears the field on the backend.
-      await updateProfile({
-        name: name.trim(),
-        bio: bio.trim(),
-        location: location.trim(),
-        avatarUrl: avatarUrl.trim(),
-      });
+      await updateProfile(input);
       toast.success('Profile updated');
       router.back();
     } catch (e) {

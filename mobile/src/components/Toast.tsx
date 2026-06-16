@@ -47,11 +47,12 @@ function ToastView({
   onDismiss,
 }: {
   toast: ToastState;
-  onDismiss: () => void;
+  onDismiss: (id: number) => void;
 }) {
   const insets = useSafeAreaInsets();
   const anim = useRef(new Animated.Value(0)).current;
   const tone = TONE_STYLES[toast.tone];
+  const dismiss = () => onDismiss(toast.id);
 
   useEffect(() => {
     Animated.spring(anim, {
@@ -67,7 +68,7 @@ function ToastView({
         duration: 200,
         useNativeDriver: true,
       }).start(({ finished }) => {
-        if (finished) onDismiss();
+        if (finished) onDismiss(toast.id);
       });
     }, VISIBLE_MS);
 
@@ -89,7 +90,7 @@ function ToastView({
       ]}
     >
       <Pressable
-        onPress={onDismiss}
+        onPress={dismiss}
         style={[
           styles.toast,
           shadow.lg,
@@ -129,7 +130,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [show],
   );
 
-  const dismiss = useCallback(() => setToast(null), []);
+  // Only clear if the toast being dismissed is still the current one — a newer
+  // toast shown during the previous one's exit animation must not be wiped.
+  const dismiss = useCallback((id: number) => {
+    setToast((cur) => (cur && cur.id === id ? null : cur));
+  }, []);
 
   return (
     <ToastContext.Provider value={api}>

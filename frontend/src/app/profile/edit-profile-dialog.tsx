@@ -39,12 +39,19 @@ function toFormValues(user: AuthUser): ProfileValues {
  */
 function buildInput(values: ProfileValues, user: AuthUser): UpdateProfileInput {
   const input: UpdateProfileInput = {};
-  if (values.name !== (user.name ?? '')) input.name = values.name.trim();
-  if (values.bio !== (user.bio ?? '')) input.bio = values.bio.trim();
-  if (values.location !== (user.location ?? ''))
-    input.location = values.location.trim();
-  if (values.avatarUrl !== (user.avatarUrl ?? ''))
-    input.avatarUrl = values.avatarUrl.trim();
+  // Compare the trimmed value we'd actually send, so a whitespace-only edit
+  // isn't treated as a change (and a real change isn't sent untrimmed).
+  const next = {
+    name: values.name.trim(),
+    bio: values.bio.trim(),
+    location: values.location.trim(),
+    avatarUrl: values.avatarUrl.trim(),
+  };
+  if (next.name !== (user.name ?? '')) input.name = next.name;
+  if (next.bio !== (user.bio ?? '')) input.bio = next.bio;
+  if (next.location !== (user.location ?? '')) input.location = next.location;
+  if (next.avatarUrl !== (user.avatarUrl ?? ''))
+    input.avatarUrl = next.avatarUrl;
   return input;
 }
 
