@@ -5,6 +5,11 @@
 type AuthPayload {
   """Short-lived JWT to send as `Authorization: Bearer`"""
   accessToken: String!
+
+  """
+  Long-lived refresh token. Only returned to native clients (header `x-client-platform: native`); web clients receive it as an httpOnly cookie instead and this field is null.
+  """
+  refreshToken: String
   user: User!
 }
 
@@ -20,13 +25,16 @@ input LoginInput {
 
 type Mutation {
   login(input: LoginInput!): AuthPayload!
-  logout: Boolean!
+  logout(token: String): Boolean!
 
   """
-  Exchange the refresh cookie for a new access token (rotates the refresh token).
+  Exchange the refresh token for a new access token (rotates the refresh token). Web reads it from the httpOnly cookie; native clients pass the `token` argument.
   """
-  refreshToken: AuthPayload!
+  refreshToken(token: String): AuthPayload!
   register(input: RegisterInput!): AuthPayload!
+
+  """Update the signed-in user's profile."""
+  updateProfile(input: UpdateProfileInput!): User!
 }
 
 type Query {
@@ -39,10 +47,20 @@ input RegisterInput {
   password: String!
 }
 
+input UpdateProfileInput {
+  avatarUrl: String
+  bio: String
+  location: String
+  name: String
+}
+
 type User {
+  avatarUrl: String
+  bio: String
   createdAt: DateTime!
   email: String!
   id: ID!
+  location: String
   name: String
   updatedAt: DateTime!
 }

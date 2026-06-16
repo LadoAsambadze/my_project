@@ -1,92 +1,110 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+
 import { useAuth } from '@/lib/auth/auth-context';
+import { loginSchema, type LoginValues } from '@/lib/validation/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { FormField, fieldDescribedBy } from '@/components/ui/form-field';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { AuthShell } from '@/components/auth-shell';
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading, login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   useEffect(() => {
     if (!loading && user) router.replace('/dashboard');
   }, [loading, user, router]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
+  async function onSubmit(values: LoginValues) {
     try {
-      await login(email, password);
+      await login(values.email, values.password);
       toast.success('Welcome back!');
       router.replace('/dashboard');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setSubmitting(false);
     }
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
+    <AuthShell>
+      <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle>Log in</CardTitle>
+          <CardTitle className="text-xl">Log in</CardTitle>
           <CardDescription>Welcome back to Event.</CardDescription>
         </CardHeader>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <FormField id="email" label="Email" error={errors.email?.message}>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                aria-invalid={!!errors.email}
+                aria-describedby={fieldDescribedBy('email', errors.email?.message)}
+                {...register('email')}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            </FormField>
+
+            <FormField
+              id="password"
+              label="Password"
+              error={errors.password?.message}
+            >
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={!!errors.password}
+                aria-describedby={fieldDescribedBy(
+                  'password',
+                  errors.password?.message,
+                )}
+                {...register('password')}
               />
-            </div>
-          </CardContent>
-          <CardFooter className="mt-6 flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Logging in…' : 'Log in'}
+            </FormField>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Spinner />}
+              {isSubmitting ? 'Logging in…' : 'Log in'}
             </Button>
-            <p className="text-muted-foreground text-sm">
+
+            <p className="text-center text-sm text-muted-foreground">
               No account?{' '}
-              <Link href="/register" className="text-foreground underline">
+              <Link
+                href="/register"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
                 Sign up
               </Link>
             </p>
-          </CardFooter>
+          </CardContent>
         </form>
       </Card>
-    </main>
+    </AuthShell>
   );
 }

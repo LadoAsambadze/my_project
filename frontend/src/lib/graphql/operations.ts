@@ -5,6 +5,9 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  location: string | null;
   createdAt: string;
 }
 
@@ -13,11 +16,29 @@ export interface AuthPayload {
   user: AuthUser;
 }
 
+export interface UpdateProfileInput {
+  name?: string;
+  bio?: string;
+  avatarUrl?: string;
+  location?: string;
+}
+
+// Shared user selection set so every operation returns the same shape.
+const USER_FIELDS = /* GraphQL */ `
+  id
+  email
+  name
+  bio
+  avatarUrl
+  location
+  createdAt
+`;
+
 export const REGISTER = /* GraphQL */ `
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
       accessToken
-      user { id email name createdAt }
+      user { ${USER_FIELDS} }
     }
   }
 `;
@@ -26,7 +47,7 @@ export const LOGIN = /* GraphQL */ `
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       accessToken
-      user { id email name createdAt }
+      user { ${USER_FIELDS} }
     }
   }
 `;
@@ -35,7 +56,7 @@ export const REFRESH = /* GraphQL */ `
   mutation Refresh {
     refreshToken {
       accessToken
-      user { id email name createdAt }
+      user { ${USER_FIELDS} }
     }
   }
 `;
@@ -48,6 +69,12 @@ export const LOGOUT = /* GraphQL */ `
 
 export const ME = /* GraphQL */ `
   query Me {
-    me { id email name createdAt }
+    me { ${USER_FIELDS} }
+  }
+`;
+
+export const UPDATE_PROFILE = /* GraphQL */ `
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) { ${USER_FIELDS} }
   }
 `;

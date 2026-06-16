@@ -1,0 +1,34 @@
+"use client"
+
+import * as React from "react"
+import { MoonIcon, SunIcon } from "lucide-react"
+import { useTheme } from "next-themes"
+
+import { Button } from "@/components/ui/button"
+
+export function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  // Avoid hydration mismatch: theme is unknown on the server.
+  React.useEffect(() => setMounted(true), [])
+
+  // Until mounted, resolvedTheme is unknown on the server; treat as not-dark so
+  // the icon and aria-label render consistently and avoid a hydration mismatch.
+  const isDark = mounted && resolvedTheme === "dark"
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+    >
+      {isDark ? (
+        <SunIcon className="size-4" />
+      ) : (
+        <MoonIcon className="size-4" />
+      )}
+    </Button>
+  )
+}
