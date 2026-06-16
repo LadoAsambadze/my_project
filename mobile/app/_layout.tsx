@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/lib/auth/auth-context';
+import { ToastProvider } from '@/components/ui';
 import { colors } from '@/theme';
 
 function RootNavigator() {
@@ -43,9 +44,11 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </ToastProvider>
     </SafeAreaProvider>
   );
 }

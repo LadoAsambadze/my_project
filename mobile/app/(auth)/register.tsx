@@ -9,30 +9,54 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth/auth-context';
 import { GraphQLRequestError } from '@/lib/graphql/client';
-import { Button, ErrorText, Field, Heading, Screen, Subtle } from '@/components/ui';
+import {
+  validateEmail,
+  validateName,
+  validateRegisterPassword,
+  runValidators,
+} from '@/lib/validation';
+import {
+  Button,
+  Field,
+  Heading,
+  Screen,
+  Subtle,
+  useToast,
+} from '@/components/ui';
 import { colors, spacing } from '@/theme';
+
+interface FieldErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+}
 
 export default function Register() {
   const { register } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit() {
-    setError(null);
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
+    const { valid, errors: nextErrors } = runValidators({
+      name: () => validateName(name),
+      email: () => validateEmail(email),
+      password: () => validateRegisterPassword(password),
+    });
+    setErrors(nextErrors);
+    if (!valid) return;
+
     setSubmitting(true);
     try {
       await register(email.trim(), password, name.trim());
+      toast.success('Account created!');
       // The root auth gate handles navigation into the app.
     } catch (e) {
-      setError(
+      toast.error(
         e instanceof GraphQLRequestError ? e.message : 'Something went wrong',
       );
     } finally {
@@ -52,7 +76,11 @@ export default function Register() {
         <Field
           label="Name"
           value={name}
-          onChangeText={setName}
+          onChangeText={(t) => {
+            setName(t);
+            if (errors.name) setErrors((e) => ({ ...e, name: undefined }));
+          }}
+          error={errors.name}
           autoCapitalize="words"
           autoComplete="name"
           placeholder="Your name"
@@ -60,7 +88,14 @@ export default function Register() {
         <Field
           label="Email"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(t) => {
+            setEmail(t);
+            if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+          }}
+          onBlur={() =>
+            setErrors((e) => ({ ...e, email: validateEmail(email) ?? undefined }))
+          }
+          error={errors.email}
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
@@ -69,13 +104,16 @@ export default function Register() {
         <Field
           label="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(t) => {
+            setPassword(t);
+            if (errors.password)
+              setErrors((e) => ({ ...e, password: undefined }));
+          }}
+          error={errors.password}
           secureTextEntry
           autoComplete="password-new"
           placeholder="At least 8 characters"
         />
-
-        <ErrorText>{error}</ErrorText>
 
         <Button title="Create account" onPress={onSubmit} loading={submitting} />
 

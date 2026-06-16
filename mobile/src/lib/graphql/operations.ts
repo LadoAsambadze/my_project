@@ -5,8 +5,22 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  location: string | null;
   createdAt: string;
 }
+
+export interface UpdateProfileInput {
+  name?: string;
+  bio?: string;
+  avatarUrl?: string;
+  location?: string;
+}
+
+// Fields requested everywhere a User is returned. Kept in one place so the
+// shape stays consistent across operations.
+const USER_FIELDS = /* GraphQL */ `id email name bio avatarUrl location createdAt`;
 
 export interface AuthPayload {
   accessToken: string;
@@ -20,7 +34,7 @@ export const REGISTER = /* GraphQL */ `
     register(input: $input) {
       accessToken
       refreshToken
-      user { id email name createdAt }
+      user { ${USER_FIELDS} }
     }
   }
 `;
@@ -30,7 +44,7 @@ export const LOGIN = /* GraphQL */ `
     login(input: $input) {
       accessToken
       refreshToken
-      user { id email name createdAt }
+      user { ${USER_FIELDS} }
     }
   }
 `;
@@ -40,7 +54,7 @@ export const REFRESH = /* GraphQL */ `
     refreshToken(token: $token) {
       accessToken
       refreshToken
-      user { id email name createdAt }
+      user { ${USER_FIELDS} }
     }
   }
 `;
@@ -53,6 +67,12 @@ export const LOGOUT = /* GraphQL */ `
 
 export const ME = /* GraphQL */ `
   query Me {
-    me { id email name createdAt }
+    me { ${USER_FIELDS} }
+  }
+`;
+
+export const UPDATE_PROFILE = /* GraphQL */ `
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) { ${USER_FIELDS} }
   }
 `;

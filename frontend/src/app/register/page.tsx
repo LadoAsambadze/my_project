@@ -1,111 +1,137 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+
 import { useAuth } from '@/lib/auth/auth-context';
+import { registerSchema, type RegisterValues } from '@/lib/validation/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { FormField, fieldDescribedBy } from '@/components/ui/form-field';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { AuthShell } from '@/components/auth-shell';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, loading, register } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { user, loading, register: registerUser } = useAuth();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '' },
+  });
 
   useEffect(() => {
     if (!loading && user) router.replace('/dashboard');
   }, [loading, user, router]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
-    }
-    setSubmitting(true);
+  async function onSubmit(values: RegisterValues) {
     try {
-      await register(email, password, name);
+      await registerUser(
+        values.email,
+        values.password,
+        values.name?.trim() || undefined,
+      );
       toast.success('Account created!');
       router.replace('/dashboard');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign up failed');
-    } finally {
-      setSubmitting(false);
     }
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
+    <AuthShell>
+      <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle>Create your account</CardTitle>
+          <CardTitle className="text-xl">Create your account</CardTitle>
           <CardDescription>Start planning your events.</CardDescription>
         </CardHeader>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+            <FormField
+              id="name"
+              label="Name"
+              error={errors.name?.message}
+              helper="Optional — how you'll appear on Event."
+            >
               <Input
                 id="name"
                 type="text"
                 autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="Ada Lovelace"
+                aria-invalid={!!errors.name}
+                aria-describedby={fieldDescribedBy(
+                  'name',
+                  errors.name?.message,
+                  "Optional — how you'll appear on Event.",
+                )}
+                {...register('name')}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            </FormField>
+
+            <FormField id="email" label="Email" error={errors.email?.message}>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                aria-invalid={!!errors.email}
+                aria-describedby={fieldDescribedBy('email', errors.email?.message)}
+                {...register('email')}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            </FormField>
+
+            <FormField
+              id="password"
+              label="Password"
+              error={errors.password?.message}
+              helper="At least 8 characters."
+            >
               <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={!!errors.password}
+                aria-describedby={fieldDescribedBy(
+                  'password',
+                  errors.password?.message,
+                  'At least 8 characters.',
+                )}
+                {...register('password')}
               />
-              <p className="text-muted-foreground text-xs">
-                At least 8 characters.
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter className="mt-6 flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Creating account…' : 'Sign up'}
+            </FormField>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Spinner />}
+              {isSubmitting ? 'Creating account…' : 'Sign up'}
             </Button>
-            <p className="text-muted-foreground text-sm">
+
+            <p className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
-              <Link href="/login" className="text-foreground underline">
+              <Link
+                href="/login"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
                 Log in
               </Link>
             </p>
-          </CardFooter>
+          </CardContent>
         </form>
       </Card>
-    </main>
+    </AuthShell>
   );
 }

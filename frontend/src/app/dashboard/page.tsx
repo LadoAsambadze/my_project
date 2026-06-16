@@ -1,9 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  CalendarHeartIcon,
+  FlowerIcon,
+  MailIcon,
+  PlusIcon,
+  UserIcon,
+} from 'lucide-react';
+
 import { useAuth } from '@/lib/auth/auth-context';
-import { Button } from '@/components/ui/button';
+import { RequireAuth } from '@/components/require-auth';
+import { buttonVariants } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  initialsFrom,
+} from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
@@ -11,59 +26,129 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { user, loading, logout } = useAuth();
+const QUICK_ACTIONS = [
+  {
+    icon: CalendarHeartIcon,
+    title: 'New party',
+    body: 'Set a date and start a guest list.',
+  },
+  {
+    icon: FlowerIcon,
+    title: 'Order flowers',
+    body: 'Browse arrangements for the occasion.',
+  },
+  {
+    icon: MailIcon,
+    title: 'Write invitations',
+    body: 'Draft and send invitation letters.',
+  },
+];
 
-  // Client-side guard: the access token lives in localStorage (not a readable
-  // cookie), so route protection happens here rather than in middleware.
-  useEffect(() => {
-    if (!loading && !user) router.replace('/login');
-  }, [loading, user, router]);
+function DashboardSkeleton() {
+  return (
+    <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 py-6">
+      <Skeleton className="h-28 w-full rounded-xl" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
+      <Skeleton className="h-40 w-full rounded-xl" />
+    </main>
+  );
+}
 
-  async function onLogout() {
-    await logout();
-    router.replace('/login');
-  }
+function DashboardContent() {
+  const { user } = useAuth();
+  if (!user) return null;
 
-  if (loading || !user) {
-    return (
-      <main className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading…</p>
-      </main>
-    );
-  }
+  const greetingName = user.name?.trim().split(/\s+/)[0] ?? null;
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Dashboard</CardTitle>
-          <CardDescription>You are signed in.</CardDescription>
+    <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 py-6">
+      {/* Welcome card */}
+      <Card>
+        <CardContent className="flex items-center gap-4 py-2">
+          <Avatar className="size-14">
+            {user.avatarUrl ? (
+              <AvatarImage src={user.avatarUrl} alt={user.name ?? ''} />
+            ) : null}
+            <AvatarFallback className="text-lg">
+              {initialsFrom(user.name, user.email)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold">
+              Welcome back{greetingName ? `, ${greetingName}` : ''}!
+            </h1>
+            <p className="truncate text-sm text-muted-foreground">
+              {user.location?.trim() || user.email}
+            </p>
+          </div>
+          <Link
+            href="/profile"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            <UserIcon />
+            Profile
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* Quick actions */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {QUICK_ACTIONS.map(({ icon: Icon, title, body }) => (
+          <Card key={title} className="h-full">
+            <CardContent className="flex flex-col gap-2 py-2">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                <Icon className="size-4.5" />
+              </span>
+              <h2 className="text-sm font-semibold">{title}</h2>
+              <p className="text-xs text-muted-foreground">{body}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Feed shell — empty state */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle>Your feed</CardTitle>
+            <CardDescription>
+              Events and updates will appear here.
+            </CardDescription>
+          </div>
+          <Badge variant="secondary">Coming soon</Badge>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="font-medium">{user.name ?? '—'}</dd>
+        <CardContent>
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-10 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
+              <CalendarHeartIcon className="size-6" />
+            </span>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Nothing here yet</p>
+              <p className="text-sm text-muted-foreground">
+                Create your first event to get started.
+              </p>
             </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="font-medium">{user.email}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Member since</dt>
-              <dd className="font-medium">
-                {new Date(user.createdAt).toLocaleDateString()}
-              </dd>
-            </div>
-          </dl>
-          <Button variant="outline" className="w-full" onClick={onLogout}>
-            Log out
-          </Button>
+            <span className={buttonVariants({ size: 'sm' })}>
+              <PlusIcon />
+              New event
+            </span>
+          </div>
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <RequireAuth fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </RequireAuth>
   );
 }

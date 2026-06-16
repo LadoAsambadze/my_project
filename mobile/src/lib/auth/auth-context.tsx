@@ -12,8 +12,10 @@ import {
   LOGOUT,
   ME,
   REGISTER,
+  UPDATE_PROFILE,
   type AuthPayload,
   type AuthUser,
+  type UpdateProfileInput,
 } from '../graphql/operations';
 import {
   clearTokens,
@@ -28,6 +30,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (input: UpdateProfileInput) => Promise<AuthUser>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -80,6 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateProfile = useCallback(async (input: UpdateProfileInput) => {
+    const data = await gql<{ updateProfile: AuthUser }>(UPDATE_PROFILE, {
+      input,
+    });
+    setUser(data.updateProfile);
+    return data.updateProfile;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       // Pass the refresh token so the server can revoke that session.
@@ -92,7 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, updateProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -9,25 +9,50 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth/auth-context';
 import { GraphQLRequestError } from '@/lib/graphql/client';
-import { Button, ErrorText, Field, Heading, Screen, Subtle } from '@/components/ui';
+import {
+  validateEmail,
+  validateLoginPassword,
+  runValidators,
+} from '@/lib/validation';
+import {
+  Button,
+  Field,
+  Heading,
+  Screen,
+  Subtle,
+  useToast,
+} from '@/components/ui';
 import { colors, spacing } from '@/theme';
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
 
 export default function Login() {
   const { login } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit() {
-    setError(null);
+    const { valid, errors: nextErrors } = runValidators({
+      email: () => validateEmail(email),
+      password: () => validateLoginPassword(password),
+    });
+    setErrors(nextErrors);
+    if (!valid) return;
+
     setSubmitting(true);
     try {
       await login(email.trim(), password);
+      toast.success('Welcome back!');
       // The root auth gate handles navigation into the app.
     } catch (e) {
-      setError(
+      toast.error(
         e instanceof GraphQLRequestError ? e.message : 'Something went wrong',
       );
     } finally {
@@ -47,7 +72,14 @@ export default function Login() {
         <Field
           label="Email"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(t) => {
+            setEmail(t);
+            if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+          }}
+          onBlur={() =>
+            setErrors((e) => ({ ...e, email: validateEmail(email) ?? undefined }))
+          }
+          error={errors.email}
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
@@ -56,13 +88,16 @@ export default function Login() {
         <Field
           label="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(t) => {
+            setPassword(t);
+            if (errors.password)
+              setErrors((e) => ({ ...e, password: undefined }));
+          }}
+          error={errors.password}
           secureTextEntry
           autoComplete="password"
           placeholder="Your password"
         />
-
-        <ErrorText>{error}</ErrorText>
 
         <Button title="Log in" onPress={onSubmit} loading={submitting} />
 

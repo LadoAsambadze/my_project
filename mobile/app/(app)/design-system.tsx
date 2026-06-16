@@ -11,7 +11,11 @@ import {
   ListItem,
   Modal,
   Screen,
+  Skeleton,
+  Spinner,
   Text,
+  Textarea,
+  useToast,
 } from '@/components/ui';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { TextVariant } from '@/components/ui';
@@ -52,6 +56,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function DesignSystem() {
   const router = useRouter();
+  const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -107,6 +112,25 @@ export default function DesignSystem() {
         <Input label="Email" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
         <Input label="Password" placeholder="••••••••" secureTextEntry />
         <Input label="With error" placeholder="Invalid" error="That doesn't look right" />
+        <Input label="With helper" placeholder="Optional" helper="We never share this." counterMax={80} value="" onChangeText={() => {}} />
+        <Textarea label="Bio" placeholder="Tell people about yourself" counterMax={280} value="" onChangeText={() => {}} />
+      </Section>
+
+      <Section title="Feedback">
+        <View style={styles.row}>
+          <Spinner />
+          <Spinner tone="muted" />
+          <Spinner size="large" />
+        </View>
+        <View style={styles.gap} />
+        <Skeleton width="60%" height={20} />
+        <View style={styles.gap} />
+        <Skeleton width="100%" height={16} />
+        <View style={styles.gap} />
+        <View style={styles.row}>
+          <Button title="Toast success" variant="secondary" fullWidth={false} onPress={() => toast.success('Saved!')} />
+          <Button title="Toast error" variant="secondary" fullWidth={false} onPress={() => toast.error('Something went wrong')} />
+        </View>
       </Section>
 
       <Section title="Badges">
