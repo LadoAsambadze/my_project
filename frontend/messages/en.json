@@ -1,0 +1,73 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "logout": "Log out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "back": "Back",
+    "retry": "Try again",
+    "error": "Something went wrong"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "profile": "Profile"
+  },
+  "main": {
+    "tagline": "Plan parties, flowers and invitations — all in one place.",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "goToDashboard": "Go to dashboard"
+  },
+  "auth": {
+    "signInTitle": "Welcome back",
+    "signInSubtitle": "Sign in to your Event account.",
+    "signUpTitle": "Create your account",
+    "signUpSubtitle": "Start planning your events.",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "namePlaceholder": "Ada Lovelace",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signingIn": "Signing in…",
+    "creatingAccount": "Creating account…",
+    "noAccount": "No account?",
+    "hasAccount": "Already have an account?",
+    "passwordHint": "At least 8 characters.",
+    "nameHint": "Optional — how you'll appear on Event.",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "confirmPassword": "Confirm password",
+    "passwordsNoMatch": "Passwords do not match",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithFacebook": "Continue with Facebook",
+    "orContinueWithEmail": "or continue with email",
+    "oauthError": "We couldn't sign you in. Please try again."
+  },
+  "profile": {
+    "title": "My profile",
+    "edit": "Edit profile",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "name": "Name",
+    "bio": "Bio",
+    "location": "Location",
+    "avatarUrl": "Avatar URL",
+    "avatarUrlHint": "Link to an image (http or https).",
+    "email": "Email",
+    "memberSince": "Member since",
+    "noBio": "No bio yet.",
+    "unnamed": "Unnamed"
+  },
+  "dashboard": {
+    "welcomeBack": "Welcome back",
+    "subtitle": "Here's what you can do next.",
+    "newParty": "New party",
+    "newPartyDesc": "Set a date and start a guest list.",
+    "orderFlowers": "Order flowers",
+    "orderFlowersDesc": "Browse arrangements for the occasion.",
+    "writeInvitations": "Write invitations",
+    "writeInvitationsDesc": "Draft and send invitation letters."
+  }
+}

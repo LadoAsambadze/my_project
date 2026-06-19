@@ -6,11 +6,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
+import { OAuthProfile } from './strategies/oauth-profile';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -23,6 +24,22 @@ interface RefreshPayload {
 export interface Tokens {
   accessToken: string;
   refreshToken: string;
+}
+
+/** The unique-where clause to look a user up by this provider's id. */
+function providerWhere(profile: OAuthProfile): Prisma.UserWhereUniqueInput {
+  return profile.provider === 'google'
+    ? { googleId: profile.providerId }
+    : { facebookId: profile.providerId };
+}
+
+/** The column to set when linking this provider to a user. */
+function providerData(
+  profile: OAuthProfile,
+): { googleId: string } | { facebookId: string } {
+  return profile.provider === 'google'
+    ? { googleId: profile.providerId }
+    : { facebookId: profile.providerId };
 }
 
 @Injectable()
@@ -38,7 +55,9 @@ export class AuthService {
   // Public flows
   // ---------------------------------------------------------------------------
 
-  async register(input: RegisterInput): Promise<{ user: User; tokens: Tokens }> {
+  async register(
+    input: RegisterInput,
+  ): Promise<{ user: User; tokens: Tokens }> {
     const existing = await this.users.findByEmail(input.email);
     if (existing) {
       throw new ConflictException('An account with this email already exists');
@@ -59,10 +78,15 @@ export class AuthService {
     const user = await this.users.findByEmail(input.email);
     // Always run a compare to keep timing roughly constant whether or not the
     // user exists, avoiding user-enumeration via response time.
-    const hash = user?.password ?? '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva';
+    const hash =
+      user?.password ??
+      '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva';
     const valid = await bcrypt.compare(input.password, hash);
     if (!user || !valid) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+    if (!user.isActive) {
+      throw new UnauthorizedException('This account has been disabled');
     }
 
     const tokens = await this.issueTokens(user);
@@ -70,10 +94,67 @@ export class AuthService {
   }
 
   /**
+   * Sign a user in from a verified OAuth provider profile. Reconnects a known
+   * social account, links a new provider to an existing account that shares the
+   * email, or creates a brand new (passwordless) account.
+   */
+  async oauthLogin(
+    profile: OAuthProfile,
+  ): Promise<{ user: User; tokens: Tokens }> {
+    const user = await this.resolveOAuthUser(profile);
+    if (!user.isActive) {
+      throw new UnauthorizedException('This account has been disabled');
+    }
+    return { user, tokens: await this.issueTokens(user) };
+  }
+
+  /** Find, link, or create the user behind a verified OAuth profile. */
+  private async resolveOAuthUser(profile: OAuthProfile): Promise<User> {
+    // 1. Returning user: match the provider id we stored on a previous login.
+    const byProviderId = await this.prisma.user.findUnique({
+      where: providerWhere(profile),
+    });
+    if (byProviderId) return byProviderId;
+
+    const { email } = profile;
+    if (!email) {
+      throw new UnauthorizedException(
+        'Your social account did not share an email address, which is required to sign in.',
+      );
+    }
+
+    // 2. Link this provider to the existing account with the same email (so
+    // password and social logins resolve to one user), or 3. create a new one.
+    // OAuth accounts start verified — the provider already confirmed the email.
+    const existing = await this.users.findByEmail(email);
+    return existing
+      ? this.linkProvider(existing, profile)
+      : this.prisma.user.create({
+          data: {
+            email,
+            name: profile.name,
+            avatarUrl: profile.avatarUrl,
+            isVerified: true,
+            ...providerData(profile),
+          },
+        });
+  }
+
+  /** Store the provider id on an existing user, backfilling name/avatar. */
+  private linkProvider(user: User, profile: OAuthProfile): Promise<User> {
+    const data: Prisma.UserUpdateInput = { ...providerData(profile) };
+    if (!user.name && profile.name) data.name = profile.name;
+    if (!user.avatarUrl && profile.avatarUrl) data.avatarUrl = profile.avatarUrl;
+    return this.users.update(user.id, data);
+  }
+
+  /**
    * Rotate a refresh token: verify it, revoke the old one, issue a fresh pair.
    * Throws if the token is missing/invalid/expired/revoked.
    */
-  async refresh(refreshToken: string | undefined): Promise<{ user: User; tokens: Tokens }> {
+  async refresh(
+    refreshToken: string | undefined,
+  ): Promise<{ user: User; tokens: Tokens }> {
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token');
     }
@@ -112,6 +193,9 @@ export class AuthService {
     const user = await this.users.findById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User no longer exists');
+    }
+    if (!user.isActive) {
+      throw new UnauthorizedException('This account has been disabled');
     }
 
     // Rotate: revoke the used token, then issue a brand new pair.
@@ -152,7 +236,7 @@ export class AuthService {
 
   private async issueTokens(user: User): Promise<Tokens> {
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email },
+      { sub: user.id, email: user.email, role: user.role },
       {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         // jsonwebtoken accepts a number of seconds for expiresIn.

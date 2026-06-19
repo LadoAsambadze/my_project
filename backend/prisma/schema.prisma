@@ -10,16 +10,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  bio       String?
-  avatarUrl String?
-  location  String?
-  password  String // bcrypt hash
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  bio        String?
+  avatarUrl  String?
+  location   String?
+  password   String? // bcrypt hash; null for accounts created via OAuth only
+  googleId   String?  @unique // the Google "sub"; set when linked to a Google login
+  facebookId String?  @unique // the Facebook user id; set when linked to a Facebook login
+  role       Role     @default(USER)
+  isVerified Boolean  @default(false) // email confirmed (OAuth signups start verified)
+  isActive   Boolean  @default(true) // false = disabled; blocked from logging in
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   refreshTokens RefreshToken[]
 }

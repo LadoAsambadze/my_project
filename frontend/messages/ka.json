@@ -1,0 +1,73 @@
+{
+  "common": {
+    "loading": "იტვირთება…",
+    "logout": "გასვლა",
+    "save": "შენახვა",
+    "cancel": "გაუქმება",
+    "edit": "რედაქტირება",
+    "back": "უკან",
+    "retry": "ხელახლა ცდა",
+    "error": "რაღაც შეცდომა მოხდა"
+  },
+  "nav": {
+    "dashboard": "მთავარი",
+    "profile": "პროფილი"
+  },
+  "main": {
+    "tagline": "დაგეგმე წვეულებები, ყვავილები და მოსაწვევები — ერთ ადგილას.",
+    "signIn": "შესვლა",
+    "signUp": "რეგისტრაცია",
+    "goToDashboard": "მთავარ გვერდზე გადასვლა"
+  },
+  "auth": {
+    "signInTitle": "კეთილი იყოს დაბრუნება",
+    "signInSubtitle": "შედი შენს Event ანგარიშზე.",
+    "signUpTitle": "შექმენი ანგარიში",
+    "signUpSubtitle": "დაიწყე ღონისძიებების დაგეგმვა.",
+    "email": "ელფოსტა",
+    "password": "პაროლი",
+    "name": "სახელი",
+    "namePlaceholder": "ანა გელაშვილი",
+    "signIn": "შესვლა",
+    "signUp": "რეგისტრაცია",
+    "signingIn": "მიმდინარეობს შესვლა…",
+    "creatingAccount": "ანგარიში იქმნება…",
+    "noAccount": "არ გაქვს ანგარიში?",
+    "hasAccount": "უკვე გაქვს ანგარიში?",
+    "passwordHint": "მინიმუმ 8 სიმბოლო.",
+    "nameHint": "არასავალდებულო — როგორ გამოჩნდები Event-ზე.",
+    "passwordTooShort": "პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო",
+    "confirmPassword": "გაიმეორე პაროლი",
+    "passwordsNoMatch": "პაროლები არ ემთხვევა",
+    "continueWithGoogle": "გაგრძელება Google-ით",
+    "continueWithFacebook": "გაგრძელება Facebook-ით",
+    "orContinueWithEmail": "ან გააგრძელე ელფოსტით",
+    "oauthError": "ვერ მოხერხდა შესვლა. სცადე ხელახლა."
+  },
+  "profile": {
+    "title": "ჩემი პროფილი",
+    "edit": "პროფილის რედაქტირება",
+    "save": "ცვლილებების შენახვა",
+    "saving": "ინახება…",
+    "cancel": "გაუქმება",
+    "name": "სახელი",
+    "bio": "შესახებ",
+    "location": "მდებარეობა",
+    "avatarUrl": "ავატარის ბმული",
+    "avatarUrlHint": "სურათის ბმული (http ან https).",
+    "email": "ელფოსტა",
+    "memberSince": "წევრი",
+    "noBio": "ბიო ჯერ არ არის.",
+    "unnamed": "უსახელო"
+  },
+  "dashboard": {
+    "welcomeBack": "კეთილი იყოს დაბრუნება",
+    "subtitle": "აი, რა შეგიძლია შემდეგ.",
+    "newParty": "ახალი წვეულება",
+    "newPartyDesc": "დანიშნე თარიღი და შექმენი სტუმრების სია.",
+    "orderFlowers": "ყვავილების შეკვეთა",
+    "orderFlowersDesc": "დაათვალიერე თაიგულები შემთხვევისთვის.",
+    "writeInvitations": "მოსაწვევების დაწერა",
+    "writeInvitationsDesc": "შექმენი და გააგზავნე მოსაწვევები."
+  }
+}

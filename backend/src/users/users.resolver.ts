@@ -13,7 +13,7 @@ export class UsersResolver {
   constructor(private readonly users: UsersService) {}
 
   @Mutation(() => User, {
-    description: 'Update the signed-in user\'s profile.',
+    description: "Update the signed-in user's profile.",
   })
   @UseGuards(GqlAuthGuard)
   async updateProfile(
@@ -26,7 +26,8 @@ export class UsersResolver {
     // field (stored as null); a trimmed non-empty string is saved.
     if (input.name !== undefined) data.name = normalize(input.name);
     if (input.bio !== undefined) data.bio = normalize(input.bio);
-    if (input.avatarUrl !== undefined) data.avatarUrl = normalize(input.avatarUrl);
+    if (input.avatarUrl !== undefined)
+      data.avatarUrl = normalize(input.avatarUrl);
     if (input.location !== undefined) data.location = normalize(input.location);
 
     return this.users.update(current.userId, data);
