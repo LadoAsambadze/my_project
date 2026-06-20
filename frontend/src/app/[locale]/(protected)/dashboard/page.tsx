@@ -9,7 +9,7 @@ export default function DashboardPage() {
   const t = useTranslations('dashboard')
   const { user } = useAuth()
 
-  const greetingName = user?.name?.trim().split(/\s+/)[0] ?? null
+  const greetingName = user?.firstName?.trim() || null
 
   const quickActions = [
     { icon: CalendarHeart, title: t('newParty'), body: t('newPartyDesc') },

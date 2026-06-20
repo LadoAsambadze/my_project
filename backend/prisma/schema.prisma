@@ -16,9 +16,11 @@ enum Role {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  name       String?
+  id         String    @id @default(cuid())
+  email      String    @unique
+  firstName  String?
+  lastName   String?
+  birthDate  DateTime? @db.Date
   bio        String?
   avatarUrl  String?
   location   String?
@@ -31,7 +33,49 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  refreshTokens RefreshToken[]
+  refreshTokens     RefreshToken[]
+  emailVerification EmailVerification?
+  passwordReset     PasswordReset?
+  loginCode         LoginCode?
+}
+
+/// A pending email-verification code, created at signup. We store only the
+/// bcrypt hash of the 6-digit code. At most one row per user (re-issued on
+/// resend); the row is deleted once the email is verified.
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// A pending passwordless-login code, created by requestLoginCode. Confirming it
+/// signs the user in (and marks the email verified). Same shape as the other
+/// code tables; one row per user, deleted once consumed.
+model LoginCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// A pending password-reset code, created by requestPasswordReset. Same shape
+/// and rules as EmailVerification but a separate purpose: confirming it lets the
+/// user set a new password (it does not verify the email). One row per user.
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 /// A hashed refresh token. We store only the hash so a DB leak can't be used

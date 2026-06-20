@@ -8,6 +8,11 @@ type AuthPayload {
   user: User!
 }
 
+input ChangePasswordInput {
+  currentPassword: String
+  newPassword: String!
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
@@ -18,18 +23,59 @@ input LoginInput {
   password: String!
 }
 
+input LoginWithCodeInput {
+  code: String!
+  email: String!
+}
+
 type Mutation {
+  """
+  Change the signed-in user's password (confirms the current one unless the account has none).
+  """
+  changePassword(input: ChangePasswordInput!): Boolean!
   login(input: LoginInput!): AuthPayload!
+
+  """Sign in by confirming a one-time code emailed via requestLoginCode."""
+  loginWithCode(input: LoginWithCodeInput!): AuthPayload!
   logout: Boolean!
 
   """
   Exchange the refresh token (read from the httpOnly cookie) for a new access token, rotating the refresh token.
   """
   refreshToken: AuthPayload!
-  register(input: RegisterInput!): AuthPayload!
+
+  """
+  Create a new account and email a verification code. The account cannot sign in until the code is confirmed via verifyEmail.
+  """
+  register(input: RegisterInput!): User!
+
+  """
+  Email a one-time sign-in code (rate-limited). Always returns true, even for unknown emails.
+  """
+  requestLoginCode(email: String!): Boolean!
+
+  """
+  Email a password-reset code (rate-limited). Always returns true, even for unknown emails.
+  """
+  requestPasswordReset(email: String!): Boolean!
+
+  """
+  Re-send a verification code to an unverified account (rate-limited). Always returns true.
+  """
+  resendVerificationCode(email: String!): Boolean!
+
+  """
+  Confirm a reset code and set a new password. Revokes all existing sessions; the user must sign in again.
+  """
+  resetPassword(input: ResetPasswordInput!): Boolean!
 
   """Update the signed-in user's profile."""
   updateProfile(input: UpdateProfileInput!): User!
+
+  """
+  Confirm the emailed verification code. On success the account is verified and signed in.
+  """
+  verifyEmail(input: VerifyEmailInput!): AuthPayload!
 }
 
 type Query {
@@ -37,9 +83,17 @@ type Query {
 }
 
 input RegisterInput {
+  birthDate: String!
   email: String!
-  name: String
+  firstName: String!
+  lastName: String!
   password: String!
+}
+
+input ResetPasswordInput {
+  code: String!
+  email: String!
+  newPassword: String!
 }
 
 enum Role {
@@ -50,20 +104,29 @@ enum Role {
 input UpdateProfileInput {
   avatarUrl: String
   bio: String
+  birthDate: String
+  firstName: String
+  lastName: String
   location: String
-  name: String
 }
 
 type User {
   avatarUrl: String
   bio: String
+  birthDate: DateTime
   createdAt: DateTime!
   email: String!
+  firstName: String
   id: ID!
   isActive: Boolean!
   isVerified: Boolean!
+  lastName: String
   location: String
-  name: String
   role: Role!
   updatedAt: DateTime!
+}
+
+input VerifyEmailInput {
+  code: String!
+  email: String!
 }

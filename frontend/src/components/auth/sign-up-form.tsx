@@ -4,21 +4,26 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation } from '@apollo/client/react'
 import { useRouter, Link } from '@/i18n/navigation'
-import { useAuth } from '@/lib/auth/auth-context'
 import { REGISTER_MUTATION } from '@/graphql/auth/mutations'
-import type { AuthResponse } from '@/graphql/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { OAuthButtons } from '@/components/auth/oauth-buttons'
 
 interface RegisterData {
-  register: AuthResponse
+  register: {
+    id: string
+    email: string
+    isVerified: boolean
+  }
 }
 
 interface RegisterVariables {
   input: {
-    name?: string
+    firstName: string
+    lastName: string
+    birthDate: string
     email: string
     password: string
   }
@@ -27,20 +32,22 @@ interface RegisterVariables {
 export function SignUpForm() {
   const t = useTranslations('auth')
   const router = useRouter()
-  const auth = useAuth()
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
   const [registerMutation, { loading }] = useMutation<
     RegisterData,
     RegisterVariables
   >(REGISTER_MUTATION, {
-    onCompleted: (data) => {
-      auth.login(data.register)
-      router.push('/dashboard')
+    onCompleted: () => {
+      // Account created but unverified — go enter the emailed code.
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
     },
     onError: (err) => setFormError(err.message),
   })
@@ -54,9 +61,20 @@ export function SignUpForm() {
       return
     }
 
+    if (password !== confirmPassword) {
+      setFormError(t('passwordsNoMatch'))
+      return
+    }
+
     void registerMutation({
       variables: {
-        input: { name: name.trim() || undefined, email, password },
+        input: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          birthDate,
+          email,
+          password,
+        },
       },
     })
   }
@@ -73,17 +91,45 @@ export function SignUpForm() {
       <OAuthButtons />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-1 flex-col gap-1.5">
+            <Label htmlFor="firstName">{t('firstName')}</Label>
+            <Input
+              id="firstName"
+              type="text"
+              autoComplete="given-name"
+              placeholder={t('firstNamePlaceholder')}
+              required
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-1 flex-col gap-1.5">
+            <Label htmlFor="lastName">{t('lastName')}</Label>
+            <Input
+              id="lastName"
+              type="text"
+              autoComplete="family-name"
+              placeholder={t('lastNamePlaceholder')}
+              required
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="name">{t('name')}</Label>
+          <Label htmlFor="birthDate">{t('birthDate')}</Label>
           <Input
-            id="name"
-            type="text"
-            autoComplete="name"
-            placeholder={t('namePlaceholder')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            id="birthDate"
+            type="date"
+            autoComplete="bday"
+            required
+            max={new Date().toISOString().split('T')[0]}
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">{t('nameHint')}</p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -101,14 +147,25 @@ export function SignUpForm() {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">{t('password')}</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             placeholder={t('passwordHint')}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
+          <PasswordInput
+            id="confirmPassword"
+            autoComplete="new-password"
+            placeholder={t('passwordHint')}
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
           />
         </div>
 

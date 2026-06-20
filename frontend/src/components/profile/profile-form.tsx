@@ -5,22 +5,30 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 interface ProfileFormProps {
-  name: string
+  firstName: string
+  lastName: string
+  birthDate: string
   bio: string
   location: string
   avatarUrl: string
-  onNameChange: (v: string) => void
+  onFirstNameChange: (v: string) => void
+  onLastNameChange: (v: string) => void
+  onBirthDateChange: (v: string) => void
   onBioChange: (v: string) => void
   onLocationChange: (v: string) => void
   onAvatarUrlChange: (v: string) => void
 }
 
 export function ProfileForm({
-  name,
+  firstName,
+  lastName,
+  birthDate,
   bio,
   location,
   avatarUrl,
-  onNameChange,
+  onFirstNameChange,
+  onLastNameChange,
+  onBirthDateChange,
   onBioChange,
   onLocationChange,
   onAvatarUrlChange,
@@ -29,12 +37,34 @@ export function ProfileForm({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Label htmlFor="profile-first-name">{t('firstName')}</Label>
+          <Input
+            id="profile-first-name"
+            value={firstName}
+            onChange={(e) => onFirstNameChange(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Label htmlFor="profile-last-name">{t('lastName')}</Label>
+          <Input
+            id="profile-last-name"
+            value={lastName}
+            onChange={(e) => onLastNameChange(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="profile-name">{t('name')}</Label>
+        <Label htmlFor="profile-birth-date">{t('birthDate')}</Label>
         <Input
-          id="profile-name"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
+          id="profile-birth-date"
+          type="date"
+          max={new Date().toISOString().split('T')[0]}
+          value={birthDate}
+          onChange={(e) => onBirthDateChange(e.target.value)}
         />
       </div>
 

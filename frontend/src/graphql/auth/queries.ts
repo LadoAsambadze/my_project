@@ -4,7 +4,9 @@ export const USER_FIELDS = gql`
   fragment UserFields on User {
     id
     email
-    name
+    firstName
+    lastName
+    birthDate
     bio
     avatarUrl
     location

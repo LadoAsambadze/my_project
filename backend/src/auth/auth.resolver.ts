@@ -5,6 +5,10 @@ import { Request, Response } from 'express';
 import { AuthService, Tokens } from './auth.service';
 import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
+import { VerifyEmailInput } from './dto/verify-email.input';
+import { ResetPasswordInput } from './dto/reset-password.input';
+import { LoginWithCodeInput } from './dto/login-with-code.input';
+import { ChangePasswordInput } from './dto/change-password.input';
 import { AuthPayload } from './models/auth-payload.model';
 import { User } from '../users/models/user.model';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
@@ -30,13 +34,57 @@ export class AuthResolver {
     private readonly config: ConfigService,
   ) {}
 
-  @Mutation(() => AuthPayload)
-  async register(
-    @Args('input') input: RegisterInput,
+  @Mutation(() => User, {
+    description:
+      'Create a new account and email a verification code. The account cannot sign in until the code is confirmed via verifyEmail.',
+  })
+  async register(@Args('input') input: RegisterInput): Promise<User> {
+    return this.auth.register(input);
+  }
+
+  @Mutation(() => AuthPayload, {
+    description:
+      'Confirm the emailed verification code. On success the account is verified and signed in.',
+  })
+  async verifyEmail(
+    @Args('input') input: VerifyEmailInput,
     @Context() ctx: GqlContext,
   ): Promise<AuthPayload> {
-    const { user, tokens } = await this.auth.register(input);
+    const { user, tokens } = await this.auth.verifyEmail(input);
     return this.deliverTokens(ctx, user, tokens);
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Re-send a verification code to an unverified account (rate-limited). Always returns true.',
+  })
+  async resendVerificationCode(
+    @Args('email') email: string,
+  ): Promise<boolean> {
+    await this.auth.resendVerificationCode(email);
+    return true;
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Email a password-reset code (rate-limited). Always returns true, even for unknown emails.',
+  })
+  async requestPasswordReset(
+    @Args('email') email: string,
+  ): Promise<boolean> {
+    await this.auth.requestPasswordReset(email);
+    return true;
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Confirm a reset code and set a new password. Revokes all existing sessions; the user must sign in again.',
+  })
+  async resetPassword(
+    @Args('input') input: ResetPasswordInput,
+  ): Promise<boolean> {
+    await this.auth.resetPassword(input);
+    return true;
   }
 
   @Mutation(() => AuthPayload)
@@ -45,6 +93,27 @@ export class AuthResolver {
     @Context() ctx: GqlContext,
   ): Promise<AuthPayload> {
     const { user, tokens } = await this.auth.login(input);
+    return this.deliverTokens(ctx, user, tokens);
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Email a one-time sign-in code (rate-limited). Always returns true, even for unknown emails.',
+  })
+  async requestLoginCode(@Args('email') email: string): Promise<boolean> {
+    await this.auth.requestLoginCode(email);
+    return true;
+  }
+
+  @Mutation(() => AuthPayload, {
+    description:
+      'Sign in by confirming a one-time code emailed via requestLoginCode.',
+  })
+  async loginWithCode(
+    @Args('input') input: LoginWithCodeInput,
+    @Context() ctx: GqlContext,
+  ): Promise<AuthPayload> {
+    const { user, tokens } = await this.auth.loginWithCode(input);
     return this.deliverTokens(ctx, user, tokens);
   }
 
@@ -63,6 +132,23 @@ export class AuthResolver {
     const current = ctx.req.cookies?.[REFRESH_COOKIE] as string | undefined;
     await this.auth.logout(current);
     clearRefreshCookie(ctx.res, this.config);
+    return true;
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      "Change the signed-in user's password (confirms the current one unless the account has none).",
+  })
+  @UseGuards(GqlAuthGuard)
+  async changePassword(
+    @CurrentUser() current: AuthenticatedUser,
+    @Args('input') input: ChangePasswordInput,
+  ): Promise<boolean> {
+    await this.auth.changePassword(
+      current.userId,
+      input.currentPassword,
+      input.newPassword,
+    );
     return true;
   }
 

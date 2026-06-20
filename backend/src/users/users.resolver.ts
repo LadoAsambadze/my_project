@@ -24,7 +24,11 @@ export class UsersResolver {
 
     // Only touch fields the client actually sent. An empty string clears the
     // field (stored as null); a trimmed non-empty string is saved.
-    if (input.name !== undefined) data.name = normalize(input.name);
+    if (input.firstName !== undefined)
+      data.firstName = normalize(input.firstName);
+    if (input.lastName !== undefined) data.lastName = normalize(input.lastName);
+    if (input.birthDate !== undefined)
+      data.birthDate = input.birthDate ? new Date(input.birthDate) : null;
     if (input.bio !== undefined) data.bio = normalize(input.bio);
     if (input.avatarUrl !== undefined)
       data.avatarUrl = normalize(input.avatarUrl);

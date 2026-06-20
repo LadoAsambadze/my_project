@@ -1,19 +1,30 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { randomInt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
+import { VerifyEmailInput } from './dto/verify-email.input';
+import { ResetPasswordInput } from './dto/reset-password.input';
+import { LoginWithCodeInput } from './dto/login-with-code.input';
 import { OAuthProfile } from './strategies/oauth-profile';
 
 const BCRYPT_ROUNDS = 12;
+
+// Email verification code settings.
+const CODE_EXPIRY_MS = 15 * 60_000; // 15 minutes
+const MAX_VERIFY_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 60_000; // 1 minute between (re)sends
 
 interface RefreshPayload {
   sub: string;
@@ -42,6 +53,21 @@ function providerData(
     : { facebookId: profile.providerId };
 }
 
+/**
+ * Split a provider's single display name ("Ada Lovelace") into first and last
+ * name. Everything after the first whitespace-separated token becomes the last
+ * name; either part may be null when the provider gave us nothing usable.
+ */
+function splitName(full: string | null): {
+  firstName: string | null;
+  lastName: string | null;
+} {
+  const parts = full?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (parts.length === 0) return { firstName: null, lastName: null };
+  const [firstName, ...rest] = parts;
+  return { firstName, lastName: rest.length ? rest.join(' ') : null };
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -49,15 +75,19 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
   // ---------------------------------------------------------------------------
   // Public flows
   // ---------------------------------------------------------------------------
 
-  async register(
-    input: RegisterInput,
-  ): Promise<{ user: User; tokens: Tokens }> {
+  /**
+   * Create an unverified account and email a verification code. No session is
+   * issued — the user must confirm the code via verifyEmail() before they can
+   * sign in.
+   */
+  async register(input: RegisterInput): Promise<User> {
     const existing = await this.users.findByEmail(input.email);
     if (existing) {
       throw new ConflictException('An account with this email already exists');
@@ -66,12 +96,287 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
     const user = await this.users.create({
       email: input.email,
-      name: input.name,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      birthDate: new Date(input.birthDate),
       password: passwordHash,
     });
 
-    const tokens = await this.issueTokens(user);
-    return { user, tokens };
+    await this.issueVerificationCode(user);
+    return user;
+  }
+
+  /**
+   * Confirm an emailed verification code. On success the account is marked
+   * verified, the code is consumed, and a session is issued (the user is now
+   * signed in).
+   */
+  async verifyEmail(
+    input: VerifyEmailInput,
+  ): Promise<{ user: User; tokens: Tokens }> {
+    const user = await this.users.findByEmail(input.email);
+    // Generic message throughout so we don't reveal which emails are registered.
+    if (!user) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+    if (user.isVerified) {
+      throw new BadRequestException('This email is already verified');
+    }
+
+    const record = await this.prisma.emailVerification.findUnique({
+      where: { userId: user.id },
+    });
+    if (!record || record.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+    if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
+      throw new BadRequestException(
+        'Too many incorrect attempts. Request a new code.',
+      );
+    }
+
+    const matches = await bcrypt.compare(input.code, record.codeHash);
+    if (!matches) {
+      await this.prisma.emailVerification.update({
+        where: { userId: user.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    // Success: mark verified, consume the code, and sign the user in.
+    const verified = await this.users.update(user.id, { isVerified: true });
+    await this.prisma.emailVerification.delete({ where: { userId: user.id } });
+    const tokens = await this.issueTokens(verified);
+    return { user: verified, tokens };
+  }
+
+  /**
+   * Re-send a verification code for an unverified account. Silently succeeds
+   * for unknown/already-verified emails (no user enumeration). Rate-limited.
+   */
+  async resendVerificationCode(email: string): Promise<void> {
+    const user = await this.users.findByEmail(email);
+    if (!user || user.isVerified) return;
+
+    const existing = await this.prisma.emailVerification.findUnique({
+      where: { userId: user.id },
+    });
+    if (
+      existing &&
+      Date.now() - existing.createdAt.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      throw new BadRequestException(
+        'Please wait a moment before requesting another code',
+      );
+    }
+
+    await this.issueVerificationCode(user);
+  }
+
+  /** Generate a 6-digit code, store its hash, and email it (upserting any prior). */
+  private async issueVerificationCode(user: User): Promise<void> {
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+    const expiresAt = new Date(Date.now() + CODE_EXPIRY_MS);
+
+    await this.prisma.emailVerification.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, codeHash, expiresAt },
+      // createdAt is refreshed so the resend cooldown measures from this issue.
+      update: { codeHash, expiresAt, attempts: 0, createdAt: new Date() },
+    });
+
+    await this.mail.sendVerificationCode(user.email, code);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Password reset
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Email a password-reset code. Silently succeeds for unknown emails or
+   * OAuth-only accounts (no password to reset) so we don't reveal which emails
+   * are registered. Rate-limited like the verification code.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.users.findByEmail(email);
+    if (!user || !user.password) return;
+
+    const existing = await this.prisma.passwordReset.findUnique({
+      where: { userId: user.id },
+    });
+    if (
+      existing &&
+      Date.now() - existing.createdAt.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      throw new BadRequestException(
+        'Please wait a moment before requesting another code',
+      );
+    }
+
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+    const expiresAt = new Date(Date.now() + CODE_EXPIRY_MS);
+    await this.prisma.passwordReset.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, codeHash, expiresAt },
+      update: { codeHash, expiresAt, attempts: 0, createdAt: new Date() },
+    });
+
+    await this.mail.sendPasswordResetCode(user.email, code);
+  }
+
+  /**
+   * Confirm a reset code and set a new password. All existing sessions are
+   * revoked so a leaked old token can't be used after a reset. The user is not
+   * auto-signed-in — they sign in again with the new password.
+   */
+  async resetPassword(input: ResetPasswordInput): Promise<void> {
+    const user = await this.users.findByEmail(input.email);
+    // Generic errors throughout — no user enumeration.
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const record = await this.prisma.passwordReset.findUnique({
+      where: { userId: user.id },
+    });
+    if (!record || record.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+    if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
+      throw new BadRequestException(
+        'Too many incorrect attempts. Request a new code.',
+      );
+    }
+
+    const matches = await bcrypt.compare(input.code, record.codeHash);
+    if (!matches) {
+      await this.prisma.passwordReset.update({
+        where: { userId: user.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const passwordHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
+    await this.users.update(user.id, { password: passwordHash });
+    await this.prisma.passwordReset.delete({ where: { userId: user.id } });
+    // Revoke every active session for this user.
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /**
+   * Change the signed-in user's password. Accounts that already have a password
+   * must confirm the current one; OAuth-only accounts (no password yet) can set
+   * one without it.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string | undefined,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+    if (user.password) {
+      const ok = currentPassword
+        ? await bcrypt.compare(currentPassword, user.password)
+        : false;
+      if (!ok) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.users.update(userId, { password: passwordHash });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Passwordless login (email one-time code)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Email a one-time sign-in code. Silently succeeds for unknown or disabled
+   * accounts (no enumeration). Works for any account with an email, including
+   * OAuth-only ones with no password. Rate-limited.
+   */
+  async requestLoginCode(email: string): Promise<void> {
+    const user = await this.users.findByEmail(email);
+    if (!user || !user.isActive) return;
+
+    const existing = await this.prisma.loginCode.findUnique({
+      where: { userId: user.id },
+    });
+    if (
+      existing &&
+      Date.now() - existing.createdAt.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      throw new BadRequestException(
+        'Please wait a moment before requesting another code',
+      );
+    }
+
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+    const expiresAt = new Date(Date.now() + CODE_EXPIRY_MS);
+    await this.prisma.loginCode.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, codeHash, expiresAt },
+      update: { codeHash, expiresAt, attempts: 0, createdAt: new Date() },
+    });
+
+    await this.mail.sendLoginCode(user.email, code);
+  }
+
+  /**
+   * Confirm a sign-in code and issue a session. Proving email ownership also
+   * marks the account verified.
+   */
+  async loginWithCode(
+    input: LoginWithCodeInput,
+  ): Promise<{ user: User; tokens: Tokens }> {
+    const user = await this.users.findByEmail(input.email);
+    // Generic errors — no enumeration.
+    if (!user) {
+      throw new BadRequestException('Invalid or expired code');
+    }
+    if (!user.isActive) {
+      throw new UnauthorizedException('This account has been disabled');
+    }
+
+    const record = await this.prisma.loginCode.findUnique({
+      where: { userId: user.id },
+    });
+    if (!record || record.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Invalid or expired code');
+    }
+    if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
+      throw new BadRequestException(
+        'Too many incorrect attempts. Request a new code.',
+      );
+    }
+
+    const matches = await bcrypt.compare(input.code, record.codeHash);
+    if (!matches) {
+      await this.prisma.loginCode.update({
+        where: { userId: user.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException('Invalid or expired code');
+    }
+
+    // Success: consume the code, verify the email if needed, and sign in.
+    await this.prisma.loginCode.delete({ where: { userId: user.id } });
+    const signedIn = user.isVerified
+      ? user
+      : await this.users.update(user.id, { isVerified: true });
+    const tokens = await this.issueTokens(signedIn);
+    return { user: signedIn, tokens };
   }
 
   async login(input: LoginInput): Promise<{ user: User; tokens: Tokens }> {
@@ -84,6 +389,11 @@ export class AuthService {
     const valid = await bcrypt.compare(input.password, hash);
     if (!user || !valid) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+    if (!user.isVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before signing in',
+      );
     }
     if (!user.isActive) {
       throw new UnauthorizedException('This account has been disabled');
@@ -127,23 +437,27 @@ export class AuthService {
     // password and social logins resolve to one user), or 3. create a new one.
     // OAuth accounts start verified — the provider already confirmed the email.
     const existing = await this.users.findByEmail(email);
-    return existing
-      ? this.linkProvider(existing, profile)
-      : this.prisma.user.create({
-          data: {
-            email,
-            name: profile.name,
-            avatarUrl: profile.avatarUrl,
-            isVerified: true,
-            ...providerData(profile),
-          },
-        });
+    if (existing) return this.linkProvider(existing, profile);
+
+    const { firstName, lastName } = splitName(profile.name);
+    return this.prisma.user.create({
+      data: {
+        email,
+        firstName,
+        lastName,
+        avatarUrl: profile.avatarUrl,
+        isVerified: true,
+        ...providerData(profile),
+      },
+    });
   }
 
   /** Store the provider id on an existing user, backfilling name/avatar. */
   private linkProvider(user: User, profile: OAuthProfile): Promise<User> {
     const data: Prisma.UserUpdateInput = { ...providerData(profile) };
-    if (!user.name && profile.name) data.name = profile.name;
+    const { firstName, lastName } = splitName(profile.name);
+    if (!user.firstName && firstName) data.firstName = firstName;
+    if (!user.lastName && lastName) data.lastName = lastName;
     if (!user.avatarUrl && profile.avatarUrl) data.avatarUrl = profile.avatarUrl;
     return this.users.update(user.id, data);
   }

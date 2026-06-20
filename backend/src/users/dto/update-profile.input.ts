@@ -1,5 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import {
+  IsDateString,
   IsOptional,
   IsString,
   IsUrl,
@@ -13,7 +14,19 @@ export class UpdateProfileInput {
   @IsOptional()
   @IsString()
   @MaxLength(80)
-  name?: string;
+  firstName?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  lastName?: string;
+
+  // ISO date string ("YYYY-MM-DD") or empty string to clear.
+  @Field({ nullable: true })
+  @ValidateIf((_, value) => value !== '' && value != null)
+  @IsDateString({}, { message: 'Birth date must be a valid date' })
+  birthDate?: string;
 
   @Field({ nullable: true })
   @IsOptional()

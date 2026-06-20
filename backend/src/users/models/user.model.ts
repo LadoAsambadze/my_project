@@ -1,4 +1,10 @@
-import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
+import {
+  ObjectType,
+  Field,
+  ID,
+  registerEnumType,
+  GraphQLISODateTime,
+} from '@nestjs/graphql';
 import { Role } from '@prisma/client';
 
 registerEnumType(Role, { name: 'Role' });
@@ -21,7 +27,13 @@ export class User {
   isActive: boolean;
 
   @Field(() => String, { nullable: true })
-  name?: string | null;
+  firstName?: string | null;
+
+  @Field(() => String, { nullable: true })
+  lastName?: string | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  birthDate?: Date | null;
 
   @Field(() => String, { nullable: true })
   bio?: string | null;

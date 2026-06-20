@@ -8,10 +8,12 @@ import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { FacebookStrategy } from './strategies/facebook.strategy';
 import { UsersModule } from '../users/users.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     UsersModule,
+    MailModule,
     PassportModule,
     // Secrets/expiry are passed per-call in AuthService (two different secrets),
     // so JwtModule just provides the JwtService.

@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import {
+  IsDateString,
   IsEmail,
-  IsOptional,
   IsString,
   MinLength,
   MaxLength,
@@ -19,9 +19,20 @@ export class RegisterInput {
   @MaxLength(72, { message: 'Password must be at most 72 characters' })
   password: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field()
   @IsString()
+  @MinLength(1, { message: 'First name is required' })
   @MaxLength(80)
-  name?: string;
+  firstName: string;
+
+  @Field()
+  @IsString()
+  @MinLength(1, { message: 'Last name is required' })
+  @MaxLength(80)
+  lastName: string;
+
+  // Accepts an ISO date string ("YYYY-MM-DD"), as produced by an <input type="date">.
+  @Field()
+  @IsDateString({}, { message: 'Birth date must be a valid date' })
+  birthDate: string;
 }

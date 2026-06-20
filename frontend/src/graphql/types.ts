@@ -7,7 +7,9 @@ export type Role = 'USER' | 'ADMIN'
 export interface AuthUser {
   id: string
   email: string
-  name: string | null
+  firstName: string | null
+  lastName: string | null
+  birthDate: string | null
   bio: string | null
   avatarUrl: string | null
   location: string | null
@@ -23,7 +25,9 @@ export interface AuthResponse {
 }
 
 export interface UpdateProfileInput {
-  name?: string
+  firstName?: string
+  lastName?: string
+  birthDate?: string
   bio?: string
   avatarUrl?: string
   location?: string
