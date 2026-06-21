@@ -93,9 +93,16 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
+    // Handles are case-insensitive: store and compare lowercased.
+    const username = input.username.toLowerCase();
+    if (await this.users.findByUsername(username)) {
+      throw new ConflictException('This username is already taken');
+    }
+
     const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
     const user = await this.users.create({
       email: input.email,
+      username,
       firstName: input.firstName,
       lastName: input.lastName,
       birthDate: new Date(input.birthDate),

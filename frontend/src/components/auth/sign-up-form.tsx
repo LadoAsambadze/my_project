@@ -21,6 +21,7 @@ interface RegisterData {
 
 interface RegisterVariables {
   input: {
+    username: string
     firstName: string
     lastName: string
     birthDate: string
@@ -33,6 +34,7 @@ export function SignUpForm() {
   const t = useTranslations('auth')
   const router = useRouter()
 
+  const [username, setUsername] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -69,6 +71,7 @@ export function SignUpForm() {
     void registerMutation({
       variables: {
         input: {
+          username: username.trim().toLowerCase(),
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           birthDate,
@@ -117,6 +120,27 @@ export function SignUpForm() {
               onChange={(e) => setLastName(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="username">{t('username')}</Label>
+          <div className="flex items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+            <span className="pl-3 text-sm text-muted-foreground">@</span>
+            <Input
+              id="username"
+              type="text"
+              autoComplete="username"
+              placeholder={t('usernamePlaceholder')}
+              required
+              minLength={3}
+              maxLength={30}
+              pattern="[a-zA-Z0-9._]+"
+              className="border-0 bg-transparent pl-1 focus-visible:ring-0"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{t('usernameHint')}</p>
         </div>
 
         <div className="flex flex-col gap-1.5">

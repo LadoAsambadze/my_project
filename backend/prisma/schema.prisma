@@ -18,6 +18,7 @@ enum Role {
 model User {
   id         String    @id @default(cuid())
   email      String    @unique
+  username   String?   @unique // Instagram-style handle; chosen at signup, unique. Null for legacy/OAuth accounts that haven't set one.
   firstName  String?
   lastName   String?
   birthDate  DateTime? @db.Date
@@ -37,6 +38,25 @@ model User {
   emailVerification EmailVerification?
   passwordReset     PasswordReset?
   loginCode         LoginCode?
+
+  // Follow graph: `following` = rows where this user is the follower (people
+  // they follow); `followers` = rows where this user is followed.
+  following Follow[] @relation("UserFollowing")
+  followers Follow[] @relation("UserFollowers")
+}
+
+/// A directed follow edge: `follower` follows `following`. One row per pair
+/// (enforced by the composite unique), removed on unfollow.
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
 }
 
 /// A pending email-verification code, created at signup. We store only the

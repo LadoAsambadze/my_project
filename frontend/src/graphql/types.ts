@@ -7,6 +7,7 @@ export type Role = 'USER' | 'ADMIN'
 export interface AuthUser {
   id: string
   email: string
+  username: string | null
   firstName: string | null
   lastName: string | null
   birthDate: string | null
@@ -17,6 +18,20 @@ export interface AuthUser {
   isVerified: boolean
   isActive: boolean
   createdAt: string
+  // Present on profile queries (MyProfile / UserProfile), not on the auth fragment.
+  followersCount?: number
+  followingCount?: number
+  isFollowedByMe?: boolean
+}
+
+// Lightweight user shape for follower/following list rows.
+export interface FollowUser {
+  id: string
+  username: string | null
+  firstName: string | null
+  lastName: string | null
+  avatarUrl: string | null
+  isFollowedByMe?: boolean
 }
 
 export interface AuthResponse {
@@ -25,6 +40,7 @@ export interface AuthResponse {
 }
 
 export interface UpdateProfileInput {
+  username?: string
   firstName?: string
   lastName?: string
   birthDate?: string

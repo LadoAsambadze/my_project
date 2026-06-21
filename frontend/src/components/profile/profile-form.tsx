@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 interface ProfileFormProps {
+  username: string
   firstName: string
   lastName: string
   birthDate: string
   bio: string
   location: string
   avatarUrl: string
+  onUsernameChange: (v: string) => void
   onFirstNameChange: (v: string) => void
   onLastNameChange: (v: string) => void
   onBirthDateChange: (v: string) => void
@@ -20,12 +22,14 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({
+  username,
   firstName,
   lastName,
   birthDate,
   bio,
   location,
   avatarUrl,
+  onUsernameChange,
   onFirstNameChange,
   onLastNameChange,
   onBirthDateChange,
@@ -37,6 +41,23 @@ export function ProfileForm({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="profile-username">{t('username')}</Label>
+        <div className="flex items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+          <span className="pl-3 text-sm text-muted-foreground">@</span>
+          <Input
+            id="profile-username"
+            value={username}
+            minLength={3}
+            maxLength={30}
+            pattern="[a-zA-Z0-9._]+"
+            className="border-0 bg-transparent pl-1 focus-visible:ring-0"
+            onChange={(e) => onUsernameChange(e.target.value)}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{t('usernameHint')}</p>
+      </div>
+
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1.5">
           <Label htmlFor="profile-first-name">{t('firstName')}</Label>

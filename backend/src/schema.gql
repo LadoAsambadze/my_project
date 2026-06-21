@@ -33,6 +33,9 @@ type Mutation {
   Change the signed-in user's password (confirms the current one unless the account has none).
   """
   changePassword(input: ChangePasswordInput!): Boolean!
+
+  """Follow another user."""
+  follow(userId: ID!): User!
   login(input: LoginInput!): AuthPayload!
 
   """Sign in by confirming a one-time code emailed via requestLoginCode."""
@@ -69,6 +72,9 @@ type Mutation {
   """
   resetPassword(input: ResetPasswordInput!): Boolean!
 
+  """Unfollow a user."""
+  unfollow(userId: ID!): User!
+
   """Update the signed-in user's profile."""
   updateProfile(input: UpdateProfileInput!): User!
 
@@ -80,6 +86,9 @@ type Mutation {
 
 type Query {
   me: User!
+
+  """Fetch a user by their @username."""
+  user(username: String!): User!
 }
 
 input RegisterInput {
@@ -88,6 +97,7 @@ input RegisterInput {
   firstName: String!
   lastName: String!
   password: String!
+  username: String!
 }
 
 input ResetPasswordInput {
@@ -108,6 +118,7 @@ input UpdateProfileInput {
   firstName: String
   lastName: String
   location: String
+  username: String
 }
 
 type User {
@@ -117,13 +128,29 @@ type User {
   createdAt: DateTime!
   email: String!
   firstName: String
+
+  """Users who follow this user."""
+  followers: [User!]!
+
+  """Number of users following this user."""
+  followersCount: Int!
+
+  """Users this user follows."""
+  following: [User!]!
+
+  """Number of users this user follows."""
+  followingCount: Int!
   id: ID!
   isActive: Boolean!
+
+  """Whether the signed-in viewer follows this user (false for self)."""
+  isFollowedByMe: Boolean!
   isVerified: Boolean!
   lastName: String
   location: String
   role: Role!
   updatedAt: DateTime!
+  username: String
 }
 
 input VerifyEmailInput {

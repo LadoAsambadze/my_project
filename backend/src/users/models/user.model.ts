@@ -2,6 +2,7 @@ import {
   ObjectType,
   Field,
   ID,
+  Int,
   registerEnumType,
   GraphQLISODateTime,
 } from '@nestjs/graphql';
@@ -16,6 +17,9 @@ export class User {
 
   @Field()
   email: string;
+
+  @Field(() => String, { nullable: true })
+  username?: string | null;
 
   @Field(() => Role)
   role: Role;
@@ -49,4 +53,17 @@ export class User {
 
   @Field()
   updatedAt: Date;
+
+  // Computed by field resolvers in UsersResolver — not present on the Prisma
+  // object, so optional in TS; still non-null in the GraphQL schema via @Field.
+  @Field(() => Int, { description: 'Number of users following this user.' })
+  followersCount?: number;
+
+  @Field(() => Int, { description: 'Number of users this user follows.' })
+  followingCount?: number;
+
+  @Field({
+    description: 'Whether the signed-in viewer follows this user (false for self).',
+  })
+  isFollowedByMe?: boolean;
 }

@@ -4,12 +4,27 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   MaxLength,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
 
 @InputType()
 export class UpdateProfileInput {
+  // Validate only when a non-empty value is sent; an empty string clears the
+  // username (stored as null).
+  @Field({ nullable: true })
+  @ValidateIf((_, value) => value !== '' && value != null)
+  @IsString()
+  @MinLength(3, { message: 'Username must be at least 3 characters' })
+  @MaxLength(30, { message: 'Username must be at most 30 characters' })
+  @Matches(/^[a-zA-Z0-9._]+$/, {
+    message:
+      'Username can only contain letters, numbers, periods and underscores',
+  })
+  username?: string;
+
   @Field({ nullable: true })
   @IsOptional()
   @IsString()

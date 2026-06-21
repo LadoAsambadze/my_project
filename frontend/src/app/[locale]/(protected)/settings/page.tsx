@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const tc = useTranslations('common')
   const { refetch } = useAuth()
 
+  const [username, setUsername] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -30,12 +31,14 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [initialized, setInitialized] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const { data, loading } = useQuery<MeData>(ME_QUERY, {
     fetchPolicy: 'network-only',
   })
 
   const seed = (u: AuthUser) => {
+    setUsername(u.username ?? '')
     setFirstName(u.firstName ?? '')
     setLastName(u.lastName ?? '')
     setBirthDate(u.birthDate ? u.birthDate.slice(0, 10) : '')
@@ -58,6 +61,7 @@ export default function SettingsPage() {
         setSaved(true)
         void refetch()
       },
+      onError: (err) => setError(err.message),
     },
   )
 
@@ -71,7 +75,9 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     setSaved(false)
+    setError(null)
     const input: UpdateProfileInput = {
+      username: username.trim().toLowerCase(),
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       birthDate,
@@ -99,12 +105,14 @@ export default function SettingsPage() {
       <section className="mb-6 flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
         <h2 className="text-lg font-semibold">{t('profileSection')}</h2>
         <ProfileForm
+          username={username}
           firstName={firstName}
           lastName={lastName}
           birthDate={birthDate}
           bio={bio}
           location={location}
           avatarUrl={avatarUrl}
+          onUsernameChange={setUsername}
           onFirstNameChange={setFirstName}
           onLastNameChange={setLastName}
           onBirthDateChange={setBirthDate}
@@ -112,6 +120,11 @@ export default function SettingsPage() {
           onLocationChange={setLocation}
           onAvatarUrlChange={setAvatarUrl}
         />
+        {error && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
         {saved && <p className="text-sm text-success">{t('saved')}</p>}
         <div>
           <Button onClick={handleSave} disabled={saving}>
