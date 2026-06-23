@@ -15,6 +15,11 @@ enum Role {
   ADMIN
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
 model User {
   id         String    @id @default(cuid())
   email      String    @unique
@@ -43,6 +48,36 @@ model User {
   // they follow); `followers` = rows where this user is followed.
   following Follow[] @relation("UserFollowing")
   followers Follow[] @relation("UserFollowers")
+
+  posts Post[]
+}
+
+/// A user's post. `body` is the optional text; a post may be text-only,
+/// media-only, or both. Attached images/videos live in `media`.
+model Post {
+  id        String      @id @default(cuid())
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String?
+  media     PostMedia[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([authorId, createdAt])
+}
+
+/// A single image or video attached to a post. `url` is where the uploaded
+/// file is served from; `type` drives whether it shows in the Photos or
+/// Videos section.
+model PostMedia {
+  id        String    @id @default(cuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  type      MediaType
+  createdAt DateTime  @default(now())
+
+  @@index([postId])
 }
 
 /// A directed follow edge: `follower` follows `following`. One row per pair

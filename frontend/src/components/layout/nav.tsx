@@ -6,6 +6,7 @@ import { useRouter, Link, usePathname } from '@/i18n/navigation'
 import { useAuth } from '@/lib/auth/auth-context'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/layout/language-switcher'
+import { UserSearch } from '@/components/layout/user-search'
 
 export function Nav() {
   const t = useTranslations()
@@ -26,12 +27,12 @@ export function Nav() {
 
   return (
     <nav className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2">
+      <div className="mx-auto flex max-w-[1600px] items-center gap-1 px-4 py-2">
         <Link href="/dashboard" className="mr-4 text-lg font-bold tracking-tight">
           Event
         </Link>
 
-        <div className="flex flex-1 items-center gap-1">
+        <div className="hidden items-center gap-1 sm:flex">
           {navLinks.map(({ href, label }) => (
             <Link
               key={href}
@@ -47,6 +48,8 @@ export function Nav() {
             </Link>
           ))}
         </div>
+
+        <UserSearch className="mx-1 w-full max-w-xs flex-1" />
 
         <div className="flex shrink-0 items-center gap-2">
           <LanguageSwitcher />

@@ -14,6 +14,13 @@
     "profile": "Profile",
     "settings": "Settings"
   },
+  "search": {
+    "placeholder": "Search people…",
+    "searching": "Searching…",
+    "noResults": "No users found",
+    "clear": "Clear search",
+    "error": "Couldn't search right now"
+  },
   "main": {
     "tagline": "Plan parties, flowers and invitations — all in one place.",
     "signIn": "Sign in",
@@ -142,5 +149,25 @@
     "orderFlowersDesc": "Browse arrangements for the occasion.",
     "writeInvitations": "Write invitations",
     "writeInvitationsDesc": "Draft and send invitation letters."
+  },
+  "posts": {
+    "composerPlaceholder": "What's on your mind?",
+    "addMedia": "Photo / Video",
+    "post": "Post",
+    "posting": "Posting…",
+    "remove": "Remove",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this post?",
+    "createError": "Couldn't publish your post.",
+    "uploadError": "Couldn't upload that file.",
+    "someone": "Someone",
+    "tabPosts": "Posts",
+    "tabPhotos": "Photos",
+    "tabVideos": "Videos",
+    "empty": "No posts yet.",
+    "noPhotos": "No photos yet.",
+    "noVideos": "No videos yet.",
+    "feedTitle": "Recent posts",
+    "feedEmpty": "No posts yet. Be the first to share something!"
   }
 }

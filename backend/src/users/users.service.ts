@@ -30,6 +30,33 @@ export class UsersService {
     return this.prisma.user.update({ where: { id }, data });
   }
 
+  /**
+   * Find active users whose @username or name matches `query` (case-insensitive,
+   * substring), excluding `excludeId` (the viewer). Only users with a username
+   * are returned so every result is navigable to /u/[username]. Capped at
+   * `limit` rows, username-first.
+   */
+  async search(query: string, excludeId: string, limit = 10): Promise<User[]> {
+    const q = query.trim();
+    if (q.length === 0) {
+      return [];
+    }
+    return this.prisma.user.findMany({
+      where: {
+        id: { not: excludeId },
+        isActive: true,
+        username: { not: null },
+        OR: [
+          { username: { contains: q, mode: 'insensitive' } },
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { username: 'asc' },
+      take: limit,
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Follow graph
   // ---------------------------------------------------------------------------

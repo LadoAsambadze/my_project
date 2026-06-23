@@ -32,10 +32,32 @@ const authLink = new SetContextLink((prevContext) => {
   }
 })
 
+// Operations that must never trigger a token refresh. RefreshToken is the
+// critical one: refreshing in response to its own 401 recurses forever (this
+// caused the unbounded request loop on the sign-in/sign-up pages, where no
+// valid refresh cookie exists). The public auth mutations legitimately return
+// 401 and have no session to refresh either.
+const NON_REFRESHABLE_OPERATIONS = new Set([
+  'RefreshToken',
+  'Login',
+  'LoginWithCode',
+  'Register',
+  'VerifyEmail',
+  'Logout',
+  'RequestLoginCode',
+  'RequestPasswordReset',
+  'ResetPassword',
+])
+
 // ─── Error Link ───────────────────────────────────────────────────────────────
 // Intercepts UNAUTHENTICATED errors, calls refreshToken, retries the operation.
 const errorLink = new ErrorLink(({ error, operation, forward }) => {
   if (!CombinedGraphQLErrors.is(error)) return
+  if (
+    operation.operationName &&
+    NON_REFRESHABLE_OPERATIONS.has(operation.operationName)
+  )
+    return
 
   const isUnauthenticated = error.errors.some(
     (err) =>

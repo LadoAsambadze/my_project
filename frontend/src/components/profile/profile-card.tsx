@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { Cake, MapPin, Mail, CalendarDays } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import type { AuthUser } from '@/graphql/types'
+import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/profile/avatar'
 
 function formatDate(value?: string | null): string | null {
@@ -19,9 +20,11 @@ interface ProfileCardProps {
   user: AuthUser
   /** Optional action rendered in the identity area (e.g. a Follow button). */
   action?: React.ReactNode
+  /** Overrides the outer wrapper (width/padding) — e.g. in a sidebar. */
+  className?: string
 }
 
-export function ProfileCard({ user, action }: ProfileCardProps) {
+export function ProfileCard({ user, action, className }: ProfileCardProps) {
   const t = useTranslations('profile')
 
   const intro: Array<{ icon: typeof Cake; value: string | null }> = [
@@ -37,7 +40,7 @@ export function ProfileCard({ user, action }: ProfileCardProps) {
   ]
 
   return (
-    <div className="max-w-sm px-4 py-8">
+    <div className={cn('max-w-sm px-4 py-8', className)}>
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         {/* Identity — avatar, @username, counts, optional action */}
         <div className="flex flex-col items-center gap-3 px-6 pt-8 pb-6 text-center">

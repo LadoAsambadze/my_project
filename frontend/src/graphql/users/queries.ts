@@ -27,8 +27,8 @@ export const USER_PROFILE_QUERY = gql`
   }
 `
 
-// Shared shape for follower/following list rows.
-const FOLLOW_USER_FIELDS = gql`
+// Shared shape for follower/following/search list rows.
+export const FOLLOW_USER_FIELDS = gql`
   fragment FollowUserFields on User {
     id
     username
@@ -36,6 +36,17 @@ const FOLLOW_USER_FIELDS = gql`
     lastName
     avatarUrl
     isFollowedByMe
+  }
+`
+
+// Live search by @username or name; backend excludes the viewer and returns
+// only users with a username, so each result links to /u/[username].
+export const SEARCH_USERS_QUERY = gql`
+  ${FOLLOW_USER_FIELDS}
+  query SearchUsers($query: String!) {
+    searchUsers(query: $query) {
+      ...FollowUserFields
+    }
   }
 `
 

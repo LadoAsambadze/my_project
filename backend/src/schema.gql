@@ -13,6 +13,11 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
+input CreatePostInput {
+  body: String
+  media: [PostMediaInput!]
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
@@ -28,11 +33,22 @@ input LoginWithCodeInput {
   email: String!
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
 type Mutation {
   """
   Change the signed-in user's password (confirms the current one unless the account has none).
   """
   changePassword(input: ChangePasswordInput!): Boolean!
+
+  """Create a post with text and/or uploaded media."""
+  createPost(input: CreatePostInput!): Post!
+
+  """Delete one of your own posts."""
+  deletePost(id: ID!): Boolean!
 
   """Follow another user."""
   follow(userId: ID!): User!
@@ -84,11 +100,48 @@ type Mutation {
   verifyEmail(input: VerifyEmailInput!): AuthPayload!
 }
 
+type Post {
+  author: User!
+
+  """Optional text body."""
+  body: String
+  createdAt: DateTime!
+  id: ID!
+
+  """Attached images and videos."""
+  media: [PostMedia!]!
+  updatedAt: DateTime!
+}
+
+type PostMedia {
+  createdAt: DateTime!
+  id: ID!
+  type: MediaType!
+
+  """URL the uploaded file is served from."""
+  url: String!
+}
+
+input PostMediaInput {
+  type: MediaType!
+
+  """URL returned by the /uploads endpoint."""
+  url: String!
+}
+
 type Query {
+  """Global news feed: everyone's posts, newest first."""
+  feed: [Post!]!
   me: User!
+
+  """Search users by @username or name (excludes the viewer)."""
+  searchUsers(query: String!): [User!]!
 
   """Fetch a user by their @username."""
   user(username: String!): User!
+
+  """A user's posts, newest first."""
+  userPosts(username: String!): [Post!]!
 }
 
 input RegisterInput {

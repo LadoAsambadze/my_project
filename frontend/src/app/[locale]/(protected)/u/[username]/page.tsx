@@ -4,13 +4,19 @@ import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@apollo/client/react'
 import { USER_PROFILE_QUERY } from '@/graphql/users/queries'
+import { USER_POSTS_QUERY } from '@/graphql/posts/queries'
 import { useAuth } from '@/lib/auth/auth-context'
-import type { AuthUser } from '@/graphql/types'
+import type { AuthUser, Post } from '@/graphql/types'
 import { ProfileCard } from '@/components/profile/profile-card'
 import { FollowButton } from '@/components/profile/follow-button'
+import { ProfileTabs } from '@/components/posts/profile-tabs'
 
 interface UserProfileData {
   user: AuthUser
+}
+
+interface UserPostsData {
+  userPosts: Post[]
 }
 
 export default function UserProfilePage() {
@@ -18,12 +24,22 @@ export default function UserProfilePage() {
   const username = String(params.username ?? '')
   const tc = useTranslations('common')
   const t = useTranslations('profile')
+  const tp = useTranslations('posts')
   const { user: me } = useAuth()
 
   const { data, loading, error } = useQuery<UserProfileData>(
     USER_PROFILE_QUERY,
     {
       variables: { username },
+      fetchPolicy: 'cache-and-network',
+    },
+  )
+
+  const { data: postsData, refetch } = useQuery<UserPostsData>(
+    USER_POSTS_QUERY,
+    {
+      variables: { username },
+      skip: !username,
       fetchPolicy: 'cache-and-network',
     },
   )
@@ -46,19 +62,40 @@ export default function UserProfilePage() {
 
   const profile = data.user
   const isSelf = me?.id === profile.id
+  const posts = postsData?.userPosts ?? []
 
   return (
-    <ProfileCard
-      user={profile}
-      action={
-        isSelf ? undefined : (
-          <FollowButton
-            userId={profile.id}
-            isFollowing={!!profile.isFollowedByMe}
-            className="w-full"
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {/* Left column: profile card + follow action, pinned. */}
+        <aside>
+          <div className="lg:sticky lg:top-20">
+            <ProfileCard
+              user={profile}
+              className="w-full max-w-none px-0 py-0"
+              action={
+                isSelf ? undefined : (
+                  <FollowButton
+                    userId={profile.id}
+                    isFollowing={!!profile.isFollowedByMe}
+                    className="w-full"
+                  />
+                )
+              }
+            />
+          </div>
+        </aside>
+
+        {/* Right column: this user's posts feed. */}
+        <section>
+          <ProfileTabs
+            posts={posts}
+            currentUserId={me?.id}
+            emptyPostsLabel={tp('empty')}
+            onDeleted={() => void refetch()}
           />
-        )
-      }
-    />
+        </section>
+      </div>
+    </div>
   )
 }

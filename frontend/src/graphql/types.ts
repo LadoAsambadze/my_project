@@ -34,6 +34,31 @@ export interface FollowUser {
   isFollowedByMe?: boolean
 }
 
+export type MediaType = 'IMAGE' | 'VIDEO'
+
+export interface PostMedia {
+  id: string
+  url: string
+  type: MediaType
+}
+
+// Lightweight author shape embedded in posts.
+export interface PostAuthor {
+  id: string
+  username: string | null
+  firstName: string | null
+  lastName: string | null
+  avatarUrl: string | null
+}
+
+export interface Post {
+  id: string
+  body: string | null
+  createdAt: string
+  author: PostAuthor
+  media: PostMedia[]
+}
+
 export interface AuthResponse {
   accessToken: string
   user: AuthUser

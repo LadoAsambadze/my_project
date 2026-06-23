@@ -35,6 +35,17 @@ export class UsersResolver {
     return user;
   }
 
+  @Query(() => [User], {
+    description: 'Search users by @username or name (excludes the viewer).',
+  })
+  @UseGuards(GqlAuthGuard)
+  searchUsers(
+    @CurrentUser() current: AuthenticatedUser,
+    @Args('query') query: string,
+  ): Promise<User[]> {
+    return this.users.search(query, current.userId);
+  }
+
   @Mutation(() => User, { description: 'Follow another user.' })
   @UseGuards(GqlAuthGuard)
   follow(
