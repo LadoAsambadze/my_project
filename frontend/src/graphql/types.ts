@@ -22,6 +22,8 @@ export interface AuthUser {
   followersCount?: number
   followingCount?: number
   isFollowedByMe?: boolean
+  // Pages this user owns — requested by the profile queries.
+  pages?: Page[]
 }
 
 // Lightweight user shape for follower/following list rows.
@@ -42,6 +44,39 @@ export interface PostMedia {
   type: MediaType
 }
 
+// Thematic categories a page can belong to (matches the backend PageType enum).
+// A single type for now; more can be added later.
+export type PageType = 'PHOTOGRAPHER'
+
+// Lightweight owner shape embedded in a page.
+export interface PageOwner {
+  id: string
+  username: string | null
+  firstName: string | null
+  lastName: string | null
+  avatarUrl: string | null
+}
+
+export interface Page {
+  id: string
+  name: string
+  type: PageType
+  photoUrl: string | null
+  postsCount?: number
+  followersCount?: number
+  isFollowedByMe?: boolean
+  createdAt: string
+  owner: PageOwner
+}
+
+// Lightweight page shape embedded in posts published as a page.
+export interface PagePreview {
+  id: string
+  name: string
+  type: PageType
+  photoUrl: string | null
+}
+
 // Lightweight author shape embedded in posts.
 export interface PostAuthor {
   id: string
@@ -56,7 +91,16 @@ export interface Post {
   body: string | null
   createdAt: string
   author: PostAuthor
+  // Set when the post was published as a page; null for personal posts.
+  page: PagePreview | null
   media: PostMedia[]
+}
+
+export interface CreatePageInput {
+  name: string
+  // Optional: the backend defaults to PHOTOGRAPHER when omitted.
+  type?: PageType
+  photoUrl?: string
 }
 
 export interface AuthResponse {

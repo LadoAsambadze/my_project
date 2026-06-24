@@ -13,9 +13,25 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
+input CreatePageInput {
+  """Display name of the page."""
+  name: String!
+
+  """URL returned by the /uploads endpoint for the page photo."""
+  photoUrl: String
+
+  """Thematic category. Defaults to PHOTOGRAPHER if omitted."""
+  type: PageType
+}
+
 input CreatePostInput {
   body: String
   media: [PostMediaInput!]
+
+  """
+  Publish the post as this page (you must own it). Omit for a personal post.
+  """
+  pageId: ID
 }
 
 """
@@ -44,14 +60,23 @@ type Mutation {
   """
   changePassword(input: ChangePasswordInput!): Boolean!
 
+  """Create a page with a name, type, and optional photo."""
+  createPage(input: CreatePageInput!): Page!
+
   """Create a post with text and/or uploaded media."""
   createPost(input: CreatePostInput!): Post!
+
+  """Delete one of your own pages."""
+  deletePage(id: ID!): Boolean!
 
   """Delete one of your own posts."""
   deletePost(id: ID!): Boolean!
 
   """Follow another user."""
   follow(userId: ID!): User!
+
+  """Follow a page."""
+  followPage(pageId: ID!): Page!
   login(input: LoginInput!): AuthPayload!
 
   """Sign in by confirming a one-time code emailed via requestLoginCode."""
@@ -91,6 +116,9 @@ type Mutation {
   """Unfollow a user."""
   unfollow(userId: ID!): User!
 
+  """Unfollow a page."""
+  unfollowPage(pageId: ID!): Page!
+
   """Update the signed-in user's profile."""
   updateProfile(input: UpdateProfileInput!): User!
 
@@ -100,7 +128,41 @@ type Mutation {
   verifyEmail(input: VerifyEmailInput!): AuthPayload!
 }
 
+type Page {
+  createdAt: DateTime!
+
+  """Number of users following this page."""
+  followersCount: Int!
+  id: ID!
+
+  """
+  Whether the signed-in viewer follows this page (false when signed out).
+  """
+  isFollowedByMe: Boolean!
+
+  """Display name of the page."""
+  name: String!
+
+  """The user who created and owns the page."""
+  owner: User!
+
+  """URL of the page photo, served from /uploads."""
+  photoUrl: String
+
+  """Number of posts published by this page."""
+  postsCount: Int!
+
+  """Thematic category of the page."""
+  type: PageType!
+  updatedAt: DateTime!
+}
+
+enum PageType {
+  PHOTOGRAPHER
+}
+
 type Post {
+  """The user who created the post."""
   author: User!
 
   """Optional text body."""
@@ -110,6 +172,9 @@ type Post {
 
   """Attached images and videos."""
   media: [PostMedia!]!
+
+  """Set when the post was published as a page; null for personal posts."""
+  page: Page
   updatedAt: DateTime!
 }
 
@@ -133,6 +198,18 @@ type Query {
   """Global news feed: everyone's posts, newest first."""
   feed: [Post!]!
   me: User!
+
+  """The signed-in user's own pages, newest first."""
+  myPages: [Page!]!
+
+  """Fetch a single page by id."""
+  page(id: ID!): Page!
+
+  """A page's posts, newest first."""
+  pagePosts(pageId: ID!): [Post!]!
+
+  """Browse all pages, newest first."""
+  pages: [Page!]!
 
   """Search users by @username or name (excludes the viewer)."""
   searchUsers(query: String!): [User!]!
@@ -201,6 +278,9 @@ type User {
   isVerified: Boolean!
   lastName: String
   location: String
+
+  """Thematic pages this user owns."""
+  pages: [Page!]!
   role: Role!
   updatedAt: DateTime!
   username: String

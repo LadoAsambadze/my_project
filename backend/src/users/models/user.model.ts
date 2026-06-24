@@ -7,6 +7,7 @@ import {
   GraphQLISODateTime,
 } from '@nestjs/graphql';
 import { Role } from '@prisma/client';
+import { Page } from '../../pages/models/page.model';
 
 registerEnumType(Role, { name: 'Role' });
 
@@ -66,4 +67,8 @@ export class User {
     description: 'Whether the signed-in viewer follows this user (false for self).',
   })
   isFollowedByMe?: boolean;
+
+  // Resolved by a field resolver in UsersResolver — pages this user owns.
+  @Field(() => [Page], { description: 'Thematic pages this user owns.' })
+  pages?: Page[];
 }

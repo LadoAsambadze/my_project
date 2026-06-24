@@ -24,6 +24,11 @@ export class PostsResolver {
     return this.posts.listByUsername(username.toLowerCase());
   }
 
+  @Query(() => [Post], { description: "A page's posts, newest first." })
+  pagePosts(@Args('pageId', { type: () => ID }) pageId: string) {
+    return this.posts.listByPageId(pageId);
+  }
+
   @Mutation(() => Post, {
     description: 'Create a post with text and/or uploaded media.',
   })

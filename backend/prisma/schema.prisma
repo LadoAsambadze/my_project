@@ -20,6 +20,13 @@ enum MediaType {
   VIDEO
 }
 
+/// Thematic category a Page belongs to. For now there is a single type;
+/// the enum is kept so more categories can be added later without reshaping
+/// the schema.
+enum PageType {
+  PHOTOGRAPHER
+}
+
 model User {
   id         String    @id @default(cuid())
   email      String    @unique
@@ -49,21 +56,61 @@ model User {
   following Follow[] @relation("UserFollowing")
   followers Follow[] @relation("UserFollowers")
 
-  posts Post[]
+  posts       Post[]
+  pages       Page[] // thematic pages this user owns (Facebook-style Pages)
+  pageFollows PageFollow[] @relation("UserPageFollows") // pages this user follows
 }
 
-/// A user's post. `body` is the optional text; a post may be text-only,
-/// media-only, or both. Attached images/videos live in `media`.
+/// A user-owned, thematic page (like a Facebook Page). For now it carries only
+/// a name, a type, and an optional photo. A page posts just like a user does:
+/// its posts live in `posts` (Post rows with this page's id in `pageId`).
+model Page {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  type      PageType @default(PHOTOGRAPHER)
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts     Post[]
+  followers PageFollow[] @relation("PageFollowers")
+
+  @@index([ownerId])
+}
+
+/// A directed follow edge from a user to a page. One row per (follower, page),
+/// removed on unfollow. Mirrors the user-to-user Follow model.
+model PageFollow {
+  id         String   @id @default(cuid())
+  followerId String
+  pageId     String
+  follower   User     @relation("UserPageFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  page       Page     @relation("PageFollowers", fields: [pageId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([followerId, pageId])
+  @@index([pageId])
+}
+
+/// A post. `body` is the optional text; a post may be text-only, media-only, or
+/// both. Attached images/videos live in `media`. `author` is always the user
+/// who created it. When `pageId` is set the post was published *as* that page
+/// (shown under the page's identity); when null it's a personal user post.
 model Post {
   id        String      @id @default(cuid())
   authorId  String
   author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  pageId    String?
+  page      Page?       @relation(fields: [pageId], references: [id], onDelete: Cascade)
   body      String?
   media     PostMedia[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
   @@index([authorId, createdAt])
+  @@index([pageId, createdAt])
 }
 
 /// A single image or video attached to a post. `url` is where the uploaded

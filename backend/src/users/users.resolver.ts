@@ -15,7 +15,9 @@ import {
 } from '@nestjs/graphql';
 import { Prisma } from '@prisma/client';
 import { User } from './models/user.model';
+import { Page } from '../pages/models/page.model';
 import { UsersService } from './users.service';
+import { PagesService } from '../pages/pages.service';
 import { UpdateProfileInput } from './dto/update-profile.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -23,7 +25,10 @@ import type { AuthenticatedUser } from '../auth/strategies/jwt-access.strategy';
 
 @Resolver(() => User)
 export class UsersResolver {
-  constructor(private readonly users: UsersService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly pagesService: PagesService,
+  ) {}
 
   @Query(() => User, { description: 'Fetch a user by their @username.' })
   @UseGuards(GqlAuthGuard)
@@ -93,6 +98,11 @@ export class UsersResolver {
       return Promise.resolve(false);
     }
     return this.users.isFollowing(current.userId, user.id);
+  }
+
+  @ResolveField(() => [Page], { description: 'Pages this user owns.' })
+  pages(@Parent() user: User): Promise<Page[]> {
+    return this.pagesService.listByOwner(user.id);
   }
 
   @Mutation(() => User, {

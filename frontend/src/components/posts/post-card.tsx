@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import type { Post } from '@/graphql/types'
 import { DELETE_POST_MUTATION } from '@/graphql/posts/mutations'
+import { PAGE_TYPE_ICONS } from '@/lib/page-types'
 import { Avatar } from '@/components/profile/avatar'
 import { PostMediaView } from '@/components/posts/post-media'
 
@@ -36,6 +37,7 @@ interface PostCardProps {
 
 export function PostCard({ post, currentUserId, onDeleted }: PostCardProps) {
   const t = useTranslations('posts')
+  const tt = useTranslations('pageTypes')
   const locale = useLocale()
 
   const [deletePost, { loading: deleting }] = useMutation(DELETE_POST_MUTATION, {
@@ -43,30 +45,49 @@ export function PostCard({ post, currentUserId, onDeleted }: PostCardProps) {
     onCompleted: () => onDeleted?.(post.id),
   })
 
-  const { author } = post
-  const name = [author.firstName, author.lastName]
+  const { author, page } = post
+  const authorName = [author.firstName, author.lastName]
     .filter(Boolean)
     .join(' ')
     .trim()
-  const profileHref = author.username ? `/u/${author.username}` : '/profile'
+
+  // A post published as a page shows the page's identity; otherwise the
+  // personal author's. The delete control still keys off the actual author.
+  const displayName = page
+    ? page.name
+    : author.username
+      ? `@${author.username}`
+      : authorName || t('someone')
+  const displayAvatar = page ? page.photoUrl : author.avatarUrl
+  const displayHref = page
+    ? `/pages/${page.id}`
+    : author.username
+      ? `/u/${author.username}`
+      : '/profile'
+  // For page posts, the icon for the page's type sits next to its name.
+  const TypeIcon = page ? PAGE_TYPE_ICONS[page.type] : null
   const isMine = currentUserId === author.id
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <header className="flex items-center gap-3">
-        <Link href={profileHref}>
-          <Avatar
-            src={author.avatarUrl}
-            name={author.username || name || '?'}
-            size="sm"
-          />
+        <Link href={displayHref}>
+          <Avatar src={displayAvatar} name={displayName} size="sm" />
         </Link>
         <div className="min-w-0 flex-1">
-          <Link href={profileHref} className="hover:underline">
-            <span className="block truncate text-sm font-semibold">
-              {author.username ? `@${author.username}` : name || t('someone')}
-            </span>
-          </Link>
+          <div className="flex items-center gap-1.5">
+            <Link href={displayHref} className="min-w-0 hover:underline">
+              <span className="block truncate text-sm font-semibold">
+                {displayName}
+              </span>
+            </Link>
+            {page && TypeIcon && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                <TypeIcon className="h-3 w-3" />
+                {tt(page.type)}
+              </span>
+            )}
+          </div>
           <time
             dateTime={post.createdAt}
             className="text-xs text-muted-foreground"

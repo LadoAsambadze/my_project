@@ -56,6 +56,7 @@ export default function DashboardPage() {
             {me && (
               <ProfileCard
                 user={me}
+                canManage
                 className="w-full max-w-none px-0 py-0"
               />
             )}

@@ -16,6 +16,7 @@ export function Nav() {
 
   const navLinks = [
     { href: '/dashboard', label: t('nav.dashboard') },
+    { href: '/pages', label: t('nav.pages') },
     { href: '/profile', label: t('nav.profile') },
     { href: '/settings', label: t('nav.settings') },
   ] as const

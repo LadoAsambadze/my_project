@@ -72,6 +72,7 @@ export default function UserProfilePage() {
           <div className="lg:sticky lg:top-20">
             <ProfileCard
               user={profile}
+              canManage={isSelf}
               className="w-full max-w-none px-0 py-0"
               action={
                 isSelf ? undefined : (

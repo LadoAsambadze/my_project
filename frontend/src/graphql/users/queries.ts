@@ -1,28 +1,47 @@
 import { gql } from '@apollo/client/core'
 import { USER_FIELDS } from '@/graphql/auth/queries'
 
-// The signed-in user's own profile, with follower/following counts.
+// Compact page shape shown in the "Pages" section of a profile card.
+export const PROFILE_PAGE_FIELDS = gql`
+  fragment ProfilePageFields on Page {
+    id
+    name
+    type
+    photoUrl
+    postsCount
+  }
+`
+
+// The signed-in user's own profile, with follower/following counts and pages.
 export const MY_PROFILE_QUERY = gql`
   ${USER_FIELDS}
+  ${PROFILE_PAGE_FIELDS}
   query MyProfile {
     me {
       ...UserFields
       followersCount
       followingCount
+      pages {
+        ...ProfilePageFields
+      }
     }
   }
 `
 
 // Another user's public profile by @username, including whether the viewer
-// follows them so we can render the Follow/Unfollow button.
+// follows them (for the Follow button) and the pages they own.
 export const USER_PROFILE_QUERY = gql`
   ${USER_FIELDS}
+  ${PROFILE_PAGE_FIELDS}
   query UserProfile($username: String!) {
     user(username: $username) {
       ...UserFields
       followersCount
       followingCount
       isFollowedByMe
+      pages {
+        ...ProfilePageFields
+      }
     }
   }
 `

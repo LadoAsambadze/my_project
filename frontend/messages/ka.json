@@ -11,6 +11,7 @@
   },
   "nav": {
     "dashboard": "მთავარი",
+    "pages": "გვერდები",
     "profile": "პროფილი",
     "settings": "პარამეტრები"
   },
@@ -169,5 +170,34 @@
     "noVideos": "ჯერ ვიდეოები არ არის.",
     "feedTitle": "ბოლო პოსტები",
     "feedEmpty": "ჯერ პოსტები არ არის. იყავი პირველი!"
+  },
+  "pages": {
+    "title": "გვერდები",
+    "create": "გვერდის შექმნა",
+    "createFirst": "შექმენი პირველი გვერდი",
+    "myPages": "ჩემი გვერდები",
+    "discover": "აღმოაჩინე",
+    "noPagesYet": "ჯერ არცერთი გვერდი არ შგიქმნია.",
+    "postsCount": "{count, plural, =0 {პოსტები არ არის} one {# პოსტი} other {# პოსტი}}",
+    "backToPages": "გვერდებზე დაბრუნება",
+    "createTitle": "გვერდის შექმნა",
+    "createSubtitle": "დაარქვი სახელი და დაამატე ფოტო.",
+    "name": "გვერდის სახელი",
+    "namePlaceholder": "მაგ. ანას ფოტოგრაფია",
+    "addPhoto": "ფოტოს დამატება",
+    "removePhoto": "წაშლა",
+    "creating": "იქმნება…",
+    "createError": "გვერდის შექმნა ვერ მოხერხდა.",
+    "uploadError": "ფოტოს ატვირთვა ვერ მოხერხდა.",
+    "notFound": "გვერდი ვერ მოიძებნა",
+    "createdBy": "შემქმნელი",
+    "delete": "გვერდის წაშლა",
+    "deleteConfirm": "წავშალო ეს გვერდი და მისი ყველა პოსტი?",
+    "follow": "გამოწერა",
+    "unfollow": "გამოწერილია",
+    "followersCount": "{count, plural, =0 {გამომწერები არ არის} one {# გამომწერი} other {# გამომწერი}}"
+  },
+  "pageTypes": {
+    "PHOTOGRAPHER": "ფოტოგრაფი"
   }
 }

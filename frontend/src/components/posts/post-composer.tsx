@@ -13,12 +13,19 @@ import { Button } from '@/components/ui/button'
 interface PostComposerProps {
   /** Called after a post is created so the parent can refresh its list. */
   onCreated?: () => void
+  /** When set, the post is published as this page (you must own it). */
+  pageId?: string
+  /** Identity shown in the composer header — defaults to the signed-in user. */
+  identity?: { name: string; avatarUrl?: string | null }
 }
 
-export function PostComposer({ onCreated }: PostComposerProps) {
+export function PostComposer({ onCreated, pageId, identity }: PostComposerProps) {
   const t = useTranslations('posts')
   const { user } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const avatarSrc = identity ? identity.avatarUrl : user?.avatarUrl
+  const avatarName = identity?.name || user?.username || user?.email || '?'
 
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<UploadedMedia[]>([])
@@ -64,6 +71,7 @@ export function PostComposer({ onCreated }: PostComposerProps) {
       variables: {
         input: {
           body: body.trim() || null,
+          pageId: pageId ?? null,
           media: media.map((m) => ({ url: m.url, type: m.type })),
         },
       },
@@ -73,11 +81,7 @@ export function PostComposer({ onCreated }: PostComposerProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div className="flex gap-3">
-        <Avatar
-          src={user?.avatarUrl}
-          name={user?.username || user?.email || '?'}
-          size="sm"
-        />
+        <Avatar src={avatarSrc} name={avatarName} size="sm" />
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}

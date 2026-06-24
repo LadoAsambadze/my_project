@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ID } from '@nestjs/graphql';
 import { MediaType } from '@prisma/client';
 import {
   ArrayMaxSize,
@@ -30,6 +30,15 @@ export class CreatePostInput {
   @IsString()
   @MaxLength(5000)
   body?: string;
+
+  @Field(() => ID, {
+    nullable: true,
+    description:
+      'Publish the post as this page (you must own it). Omit for a personal post.',
+  })
+  @IsOptional()
+  @IsString()
+  pageId?: string;
 
   @Field(() => [PostMediaInput], { nullable: true })
   @IsOptional()

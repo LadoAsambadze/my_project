@@ -54,7 +54,11 @@ export default function ProfilePage() {
         {/* Left column: profile card, pinned. */}
         <aside>
           <div className="lg:sticky lg:top-20">
-            <ProfileCard user={me} className="w-full max-w-none px-0 py-0" />
+            <ProfileCard
+              user={me}
+              canManage
+              className="w-full max-w-none px-0 py-0"
+            />
           </div>
         </aside>
 
