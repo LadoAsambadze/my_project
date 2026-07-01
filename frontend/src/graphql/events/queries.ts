@@ -13,6 +13,12 @@ export const EVENT_FIELDS = gql`
     coverUrl
     startsAt
     createdAt
+    likesCount
+    likedByMe
+    commentsCount
+    goingCount
+    interestedCount
+    myRsvp
     author {
       id
       username
@@ -49,12 +55,29 @@ export const PAGE_EVENTS_QUERY = gql`
   }
 `
 
-// Everyone's events, newest first — interleaved into the dashboard news feed.
+// Everyone's events, newest first — drives the "upcoming" sidebar rail.
 export const EVENTS_FEED_QUERY = gql`
   ${EVENT_FIELDS}
   query EventsFeed {
     eventsFeed {
       ...EventFields
+    }
+  }
+`
+
+// A single event with the attendee avatar row (the event detail page).
+export const EVENT_QUERY = gql`
+  ${EVENT_FIELDS}
+  query Event($id: ID!) {
+    event(id: $id) {
+      ...EventFields
+      attendees {
+        id
+        username
+        firstName
+        lastName
+        avatarUrl
+      }
     }
   }
 `

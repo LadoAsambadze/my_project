@@ -45,6 +45,16 @@ export const PAGES_QUERY = gql`
   }
 `
 
+// Search pages by name — powers the "Pages" group of the global search bar.
+export const SEARCH_PAGES_QUERY = gql`
+  ${PAGE_FIELDS}
+  query SearchPages($query: String!) {
+    searchPages(query: $query) {
+      ...PageFields
+    }
+  }
+`
+
 // A single page by id (page detail header).
 export const PAGE_QUERY = gql`
   ${PAGE_FIELDS}

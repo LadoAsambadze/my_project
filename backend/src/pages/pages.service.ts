@@ -89,6 +89,20 @@ export class PagesService {
     });
   }
 
+  /** Search pages by name (case-insensitive contains). */
+  search(query: string, limit = 8) {
+    const q = query.trim();
+    if (!q) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.page.findMany({
+      where: { name: { contains: q, mode: 'insensitive' } },
+      include: pageInclude,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
   /** How many posts a page has published. */
   countPosts(pageId: string): Promise<number> {
     return this.prisma.post.count({ where: { pageId } });

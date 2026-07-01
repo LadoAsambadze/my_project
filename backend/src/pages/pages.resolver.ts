@@ -34,6 +34,13 @@ export class PagesResolver {
     return this.pagesService.listByOwner(current.userId);
   }
 
+  @Query(() => [Page], {
+    description: 'Search pages by name (case-insensitive).',
+  })
+  searchPages(@Args('query') query: string) {
+    return this.pagesService.search(query);
+  }
+
   @Query(() => Page, { description: 'Fetch a single page by id.' })
   async page(@Args('id', { type: () => ID }) id: string): Promise<Page> {
     const page = await this.pagesService.findById(id);

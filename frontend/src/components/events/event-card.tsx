@@ -2,10 +2,16 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { useMutation } from '@apollo/client/react'
-import { CalendarDays, MapPin, Trash2 } from 'lucide-react'
-import type { EventItem } from '@/graphql/types'
-import { DELETE_EVENT_MUTATION } from '@/graphql/events/mutations'
+import { CalendarDays, Check, MapPin, Star, Trash2 } from 'lucide-react'
+import { Link } from '@/i18n/navigation'
+import type { EventItem, RsvpStatus } from '@/graphql/types'
+import {
+  DELETE_EVENT_MUTATION,
+  RSVP_EVENT_MUTATION,
+} from '@/graphql/events/mutations'
 import { EVENT_TYPE_ICONS, subtypeIcon } from '@/lib/event-types'
+import { cn } from '@/lib/utils'
+import { EngagementBar } from '@/components/engagement/engagement-bar'
 
 function formatFull(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
@@ -42,20 +48,40 @@ export function EventCard({ event, currentUserId, onDeleted }: EventCardProps) {
     },
   )
 
+  // Toggling the current status withdraws the RSVP; picking the other one
+  // switches it. The mutation returns fresh counts, so the cache updates.
+  const [rsvp, { loading: rsvping }] = useMutation(RSVP_EVENT_MUTATION)
+  const setRsvp = (status: RsvpStatus) => {
+    void rsvp({
+      variables: {
+        eventId: event.id,
+        status: event.myRsvp === status ? null : status,
+      },
+    })
+  }
+
   const start = new Date(event.startsAt)
+  const isPast = start.getTime() < Date.now()
   const month = new Intl.DateTimeFormat(locale, { month: 'short' }).format(start)
   const day = new Intl.DateTimeFormat(locale, { day: 'numeric' }).format(start)
   const isMine = currentUserId === event.author.id
 
   return (
-    <article className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <article
+      className={cn(
+        'overflow-hidden rounded-xl border border-border bg-card shadow-sm',
+        isPast && 'opacity-75',
+      )}
+    >
       {event.coverUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={event.coverUrl}
-          alt=""
-          className="aspect-video w-full object-cover"
-        />
+        <Link href={`/events/${event.id}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={event.coverUrl}
+            alt=""
+            className="aspect-video w-full object-cover"
+          />
+        </Link>
       )}
       <div className="p-4">
         <div className="flex items-start gap-3">
@@ -79,10 +105,17 @@ export function EventCard({ event, currentUserId, onDeleted }: EventCardProps) {
                   {tts(event.subtype)}
                 </span>
               )}
+              {isPast && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {t('past')}
+                </span>
+              )}
             </div>
-            <h3 className="break-words text-base font-semibold">
-              {event.title}
-            </h3>
+            <Link href={`/events/${event.id}`} className="hover:underline">
+              <h3 className="break-words text-base font-semibold">
+                {event.title}
+              </h3>
+            </Link>
             <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5 shrink-0" />
               <time dateTime={event.startsAt}>
@@ -117,6 +150,56 @@ export function EventCard({ event, currentUserId, onDeleted }: EventCardProps) {
             {event.description}
           </p>
         )}
+
+        {/* RSVP — hidden once the event is over */}
+        {!isPast && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={rsvping}
+              onClick={() => setRsvp('GOING')}
+              aria-pressed={event.myRsvp === 'GOING'}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                event.myRsvp === 'GOING'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground',
+              )}
+            >
+              <Check className="h-3.5 w-3.5" />
+              {t('going')}
+              {(event.goingCount ?? 0) > 0 && ` · ${event.goingCount}`}
+            </button>
+            <button
+              type="button"
+              disabled={rsvping}
+              onClick={() => setRsvp('INTERESTED')}
+              aria-pressed={event.myRsvp === 'INTERESTED'}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                event.myRsvp === 'INTERESTED'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground',
+              )}
+            >
+              <Star className="h-3.5 w-3.5" />
+              {t('interested')}
+              {(event.interestedCount ?? 0) > 0 &&
+                ` · ${event.interestedCount}`}
+            </button>
+          </div>
+        )}
+
+        <div className="mt-3">
+          <EngagementBar
+            target="EVENT"
+            targetId={event.id}
+            likesCount={event.likesCount}
+            likedByMe={event.likedByMe}
+            commentsCount={event.commentsCount}
+            currentUserId={currentUserId}
+          />
+        </div>
       </div>
     </article>
   )

@@ -28,7 +28,10 @@ export class Design {
   @Field({ description: 'Title of the design.' })
   title: string;
 
-  @Field({
+  // Nullable in GraphQL (though always set) so it merges with
+  // Request.occasion inside the FeedItem union selection.
+  @Field(() => String, {
+    nullable: true,
     description:
       'Occasion label from the frontend catalog (e.g. "WEDDING"), mirroring Event.subtype.',
   })
@@ -51,7 +54,12 @@ export class Design {
   })
   images: DesignImage[];
 
-  @Field(() => Page, { description: 'The designer page that published it.' })
+  // Nullable in GraphQL (though always set) so it merges with Post.page
+  // inside the FeedItem union selection.
+  @Field(() => Page, {
+    nullable: true,
+    description: 'The designer page that published it.',
+  })
   page: Page;
 
   @Field(() => GraphQLISODateTime)

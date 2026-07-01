@@ -9,6 +9,9 @@ export const CATERING_OFFER_FIELDS = gql`
     description
     pricePerPerson
     createdAt
+    likesCount
+    likedByMe
+    commentsCount
     images {
       id
       url

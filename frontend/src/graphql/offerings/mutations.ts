@@ -10,6 +10,15 @@ export const CREATE_OFFERING_MUTATION = gql`
   }
 `
 
+export const UPDATE_OFFERING_MUTATION = gql`
+  ${OFFERING_FIELDS}
+  mutation UpdateOffering($input: UpdateOfferingInput!) {
+    updateOffering(input: $input) {
+      ...OfferingFields
+    }
+  }
+`
+
 export const DELETE_OFFERING_MUTATION = gql`
   mutation DeleteOffering($id: ID!) {
     deleteOffering(id: $id)

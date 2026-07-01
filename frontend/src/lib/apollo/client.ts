@@ -114,7 +114,22 @@ const httpLink = new HttpLink({
 // ─── Apollo Client ──────────────────────────────────────────────────────────
 export const apolloClient = new ApolloClient({
   link: ApolloLink.from([errorLink, authLink, httpLink]),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    // The FeedItem union needs the concrete types listed so fragment matching
+    // works on feedPage results.
+    possibleTypes: {
+      FeedItem: [
+        'Post',
+        'Event',
+        'Design',
+        'CateringOffer',
+        'Offering',
+        'Work',
+        'FloristItem',
+        'Request',
+      ],
+    },
+  }),
   defaultOptions: {
     watchQuery: { fetchPolicy: 'cache-and-network' },
   },

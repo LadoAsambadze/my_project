@@ -4,7 +4,10 @@ import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation } from '@apollo/client/react'
 import { CalendarPlus, ChevronLeft, ImagePlus, Loader2, X } from 'lucide-react'
-import { CREATE_EVENT_MUTATION } from '@/graphql/events/mutations'
+import {
+  CREATE_EVENT_MUTATION,
+  UPDATE_EVENT_MUTATION,
+} from '@/graphql/events/mutations'
 import { uploadFile } from '@/lib/upload'
 import {
   EVENT_TYPES,
@@ -12,37 +15,64 @@ import {
   subtypesFor,
   subtypeIcon,
 } from '@/lib/event-types'
-import type { EventType } from '@/graphql/types'
+import type { EventItem, EventType } from '@/graphql/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+/** ISO timestamp → the local "YYYY-MM-DDTHH:mm" a datetime-local input wants. */
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 interface EventComposerProps {
-  /** Called after an event is created so the parent can refresh its list. */
+  /** Called after an event is created/saved so the parent can refresh. */
   onCreated?: () => void
   /** When set, the event is hosted as this page (you must own it). */
   pageId?: string
+  /** When set the composer opens in edit mode for this event. */
+  initial?: EventItem | null
+  /** Called when an edit is cancelled. */
+  onCancelEdit?: () => void
 }
 
-export function EventComposer({ onCreated, pageId }: EventComposerProps) {
+export function EventComposer({
+  onCreated,
+  pageId,
+  initial,
+  onCancelEdit,
+}: EventComposerProps) {
   const t = useTranslations('events')
   const tt = useTranslations('eventTypes')
   const tts = useTranslations('eventSubtypes')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [open, setOpen] = useState(false)
+  const isEdit = !!initial
+  const [open, setOpen] = useState(isEdit)
   // type/subtype are null until their card is picked — later steps stay hidden.
-  const [type, setType] = useState<EventType | null>(null)
-  const [subtype, setSubtype] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [startsAt, setStartsAt] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [coverUrl, setCoverUrl] = useState<string | null>(null)
+  const [type, setType] = useState<EventType | null>(initial?.type ?? null)
+  const [subtype, setSubtype] = useState<string | null>(
+    initial?.subtype ?? null,
+  )
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [startsAt, setStartsAt] = useState(
+    initial ? toLocalInputValue(initial.startsAt) : '',
+  )
+  const [location, setLocation] = useState(initial?.location ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [coverUrl, setCoverUrl] = useState<string | null>(
+    initial?.coverUrl ?? null,
+  )
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const reset = () => {
+    if (isEdit) {
+      onCancelEdit?.()
+      return
+    }
     setOpen(false)
     setType(null)
     setSubtype(null)
@@ -55,10 +85,10 @@ export function EventComposer({ onCreated, pageId }: EventComposerProps) {
   }
 
   const [createEvent, { loading: creating }] = useMutation(
-    CREATE_EVENT_MUTATION,
+    isEdit ? UPDATE_EVENT_MUTATION : CREATE_EVENT_MUTATION,
     {
       onCompleted: () => {
-        reset()
+        if (!isEdit) reset()
         onCreated?.()
       },
       onError: (err) => setError(err.message || t('createError')),
@@ -91,18 +121,30 @@ export function EventComposer({ onCreated, pageId }: EventComposerProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!canSubmit || type === null) return
+    // Edit sends every field; empty strings clear the nullable ones.
     void createEvent({
       variables: {
-        input: {
-          title: title.trim(),
-          type,
-          subtype: subtype ?? null,
-          startsAt: new Date(startsAt).toISOString(),
-          location: location.trim() || null,
-          description: description.trim() || null,
-          coverUrl: coverUrl ?? null,
-          pageId: pageId ?? null,
-        },
+        input: isEdit
+          ? {
+              eventId: initial.id,
+              title: title.trim(),
+              type,
+              subtype: subtype ?? '',
+              startsAt: new Date(startsAt).toISOString(),
+              location: location.trim(),
+              description: description.trim(),
+              coverUrl: coverUrl ?? '',
+            }
+          : {
+              title: title.trim(),
+              type,
+              subtype: subtype ?? null,
+              startsAt: new Date(startsAt).toISOString(),
+              location: location.trim() || null,
+              description: description.trim() || null,
+              coverUrl: coverUrl ?? null,
+              pageId: pageId ?? null,
+            },
       },
     })
   }
@@ -340,7 +382,13 @@ export function EventComposer({ onCreated, pageId }: EventComposerProps) {
           {t('cancel')}
         </Button>
         <Button type="submit" disabled={!canSubmit}>
-          {creating ? t('creating') : t('submit')}
+          {creating
+            ? isEdit
+              ? t('saving')
+              : t('creating')
+            : isEdit
+              ? t('save')
+              : t('submit')}
         </Button>
       </div>
     </form>

@@ -10,6 +10,15 @@ export const CREATE_DESIGN_MUTATION = gql`
   }
 `
 
+export const UPDATE_DESIGN_MUTATION = gql`
+  ${DESIGN_FIELDS}
+  mutation UpdateDesign($input: UpdateDesignInput!) {
+    updateDesign(input: $input) {
+      ...DesignFields
+    }
+  }
+`
+
 export const DELETE_DESIGN_MUTATION = gql`
   mutation DeleteDesign($id: ID!) {
     deleteDesign(id: $id)

@@ -2,28 +2,15 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import type {
-  CateringOffer,
-  Design,
-  EventItem,
-  Offering,
-  Post,
-} from '@/graphql/types'
+import { Lock } from 'lucide-react'
+import { Link } from '@/i18n/navigation'
+import type { EventItem, Page, Post } from '@/graphql/types'
 import { cn } from '@/lib/utils'
 import { PostFeed } from '@/components/posts/post-feed'
 import { EventFeed } from '@/components/events/event-feed'
-import { DesignGallery } from '@/components/designs/design-gallery'
-import { OfferGallery } from '@/components/catering/offer-gallery'
-import { OfferingGallery } from '@/components/offerings/offering-gallery'
-
-type Tab =
-  | 'posts'
-  | 'designs'
-  | 'menu'
-  | 'services'
-  | 'photos'
-  | 'videos'
-  | 'events'
+import { VendorSection } from '@/components/vendor/vendor-section'
+import { VENDOR_CONFIGS } from '@/components/vendor/vendor-configs'
+import { Button } from '@/components/ui/button'
 
 interface ProfileTabsProps {
   posts: Post[]
@@ -36,30 +23,13 @@ interface ProfileTabsProps {
   onEventDeleted?: (id: string) => void
   /** Rendered at the top of the Events tab (e.g. a create-event form) for owners. */
   eventComposer?: React.ReactNode
-  /** When set, a Designs tab appears showing this portfolio (designer pages). */
-  designs?: Design[]
-  /** True when the viewer owns the designs' page (shows delete controls). */
-  canDeleteDesigns?: boolean
-  /** Called after a design is deleted so the parent can refresh its list. */
-  onDesignDeleted?: (id: string) => void
-  /** Rendered at the top of the Designs tab (a create-design form) for owners. */
-  designComposer?: React.ReactNode
-  /** When set, a Menu tab appears showing these offers (catering pages). */
-  cateringOffers?: CateringOffer[]
-  /** True when the viewer owns the offers' page (shows delete controls). */
-  canDeleteOffers?: boolean
-  /** Called after an offer is deleted so the parent can refresh its list. */
-  onOfferDeleted?: (id: string) => void
-  /** Rendered at the top of the Menu tab (a create-offer form) for owners. */
-  offerComposer?: React.ReactNode
-  /** When set, a Services tab appears (musician/equipment pages). */
-  offerings?: Offering[]
-  /** True when the viewer owns the offerings' page (shows delete controls). */
-  canDeleteOfferings?: boolean
-  /** Called after an offering is deleted so the parent can refresh its list. */
-  onOfferingDeleted?: (id: string) => void
-  /** Rendered at the top of the Services tab (a create form) for owners. */
-  offeringComposer?: React.ReactNode
+  /**
+   * When rendering a page profile, the page itself — enables its vendor
+   * sections. Owners additionally see the other sections locked, as a nudge
+   * to add more vendor types.
+   */
+  page?: Page
+  isPageOwner?: boolean
 }
 
 export function ProfileTabs({
@@ -70,63 +40,66 @@ export function ProfileTabs({
   onDeleted,
   onEventDeleted,
   eventComposer,
-  designs,
-  canDeleteDesigns,
-  onDesignDeleted,
-  designComposer,
-  cateringOffers,
-  canDeleteOffers,
-  onOfferDeleted,
-  offerComposer,
-  offerings,
-  canDeleteOfferings,
-  onOfferingDeleted,
-  offeringComposer,
+  page,
+  isPageOwner,
 }: ProfileTabsProps) {
   const t = useTranslations('posts')
   const te = useTranslations('events')
-  const td = useTranslations('designs')
-  const tm = useTranslations('catering')
-  const to = useTranslations('offerings')
-  const [tab, setTab] = useState<Tab>('posts')
+  const tp = useTranslations('pages')
+  // Root-scope translator for the per-config namespaces (works.tab, ...).
+  const tRoot = useTranslations()
+  const [tab, setTab] = useState<string>('posts')
 
   // Flatten media across all posts for the Photos / Videos galleries.
   const photos = posts.flatMap((p) => p.media.filter((m) => m.type === 'IMAGE'))
   const videos = posts.flatMap((p) => p.media.filter((m) => m.type === 'VIDEO'))
 
-  const tabs: Array<{ key: Tab; label: string }> = [
+  // Vendor sections: active ones for everyone, locked ones for the owner only
+  // (a nudge to add more vendor types — clicking shows how to unlock).
+  const activeConfigs = page
+    ? VENDOR_CONFIGS.filter((c) => page.types.includes(c.pageType))
+    : []
+  const lockedConfigs =
+    page && isPageOwner
+      ? VENDOR_CONFIGS.filter((c) => !page.types.includes(c.pageType))
+      : []
+
+  const tabs: Array<{ key: string; label: string; locked?: boolean }> = [
     { key: 'posts', label: t('tabPosts') },
-    // Vendor tabs appear only for the matching page types (right after Posts,
-    // as the portfolio/menu is their main content).
-    ...(designs !== undefined
-      ? [{ key: 'designs' as const, label: td('tab') }]
-      : []),
-    ...(cateringOffers !== undefined
-      ? [{ key: 'menu' as const, label: tm('tab') }]
-      : []),
-    ...(offerings !== undefined
-      ? [{ key: 'services' as const, label: to('tab') }]
-      : []),
+    ...activeConfigs.map((c) => ({
+      key: c.key,
+      label: tRoot(`${c.ns}.tab`),
+    })),
     { key: 'photos', label: t('tabPhotos') },
     { key: 'videos', label: t('tabVideos') },
     { key: 'events', label: te('tab') },
+    ...lockedConfigs.map((c) => ({
+      key: c.key,
+      label: tRoot(`${c.ns}.tab`),
+      locked: true,
+    })),
   ]
+
+  const activeConfig = activeConfigs.find((c) => c.key === tab)
+  const lockedConfig = lockedConfigs.find((c) => c.key === tab)
 
   return (
     <div>
-      <div className="mb-4 flex gap-1 border-b border-border">
-        {tabs.map(({ key, label }) => (
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
+        {tabs.map(({ key, label, locked }) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
             className={cn(
-              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+              '-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
               tab === key
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
+              locked && 'opacity-60',
             )}
           >
+            {locked && <Lock className="h-3.5 w-3.5" />}
             {label}
           </button>
         ))}
@@ -141,36 +114,28 @@ export function ProfileTabs({
         />
       )}
 
-      {tab === 'designs' && designs !== undefined && (
-        <div className="flex flex-col gap-4">
-          {designComposer}
-          <DesignGallery
-            designs={designs}
-            canDelete={canDeleteDesigns}
-            onDeleted={onDesignDeleted}
-          />
-        </div>
+      {activeConfig && page && (
+        <VendorSection
+          config={activeConfig}
+          page={page}
+          isOwner={!!isPageOwner}
+          currentUserId={currentUserId}
+        />
       )}
 
-      {tab === 'menu' && cateringOffers !== undefined && (
-        <div className="flex flex-col gap-4">
-          {offerComposer}
-          <OfferGallery
-            offers={cateringOffers}
-            canDelete={canDeleteOffers}
-            onDeleted={onOfferDeleted}
-          />
-        </div>
-      )}
-
-      {tab === 'services' && offerings !== undefined && (
-        <div className="flex flex-col gap-4">
-          {offeringComposer}
-          <OfferingGallery
-            offerings={offerings}
-            canDelete={canDeleteOfferings}
-            onDeleted={onOfferingDeleted}
-          />
+      {lockedConfig && page && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-12 text-center">
+          <Lock className="h-8 w-8 text-muted-foreground" />
+          <p className="max-w-sm text-sm text-muted-foreground">
+            {tp('lockedSection', {
+              type: tRoot(`pageTypes.${lockedConfig.pageType}`),
+            })}
+          </p>
+          <Button asChild size="sm">
+            <Link href={`/pages/${page.id}/settings`}>
+              {tp('settingsButton')}
+            </Link>
+          </Button>
         </div>
       )}
 
@@ -187,6 +152,7 @@ export function ProfileTabs({
                 key={m.id}
                 src={m.url}
                 alt=""
+                loading="lazy"
                 className="aspect-square w-full rounded-md bg-muted object-cover"
               />
             ))}

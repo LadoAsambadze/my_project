@@ -6,24 +6,11 @@ import { useQuery } from '@apollo/client/react'
 import { PAGE_QUERY } from '@/graphql/pages/queries'
 import { PAGE_POSTS_QUERY } from '@/graphql/posts/queries'
 import { PAGE_EVENTS_QUERY } from '@/graphql/events/queries'
-import { PAGE_DESIGNS_QUERY } from '@/graphql/designs/queries'
-import { PAGE_CATERING_OFFERS_QUERY } from '@/graphql/catering/queries'
-import { PAGE_OFFERINGS_QUERY } from '@/graphql/offerings/queries'
 import { useAuth } from '@/lib/auth/auth-context'
-import type {
-  CateringOffer,
-  Design,
-  EventItem,
-  Offering,
-  Page,
-  Post,
-} from '@/graphql/types'
+import type { EventItem, Page, Post } from '@/graphql/types'
 import { PageHeader } from '@/components/pages/page-header'
 import { PostComposer } from '@/components/posts/post-composer'
 import { EventComposer } from '@/components/events/event-composer'
-import { DesignComposer } from '@/components/designs/design-composer'
-import { OfferComposer } from '@/components/catering/offer-composer'
-import { OfferingComposer } from '@/components/offerings/offering-composer'
 import { ProfileTabs } from '@/components/posts/profile-tabs'
 
 interface PageData {
@@ -36,18 +23,6 @@ interface PagePostsData {
 
 interface PageEventsData {
   pageEvents: EventItem[]
-}
-
-interface PageDesignsData {
-  pageDesigns: Design[]
-}
-
-interface PageCateringOffersData {
-  pageCateringOffers: CateringOffer[]
-}
-
-interface PageOfferingsData {
-  pageOfferings: Offering[]
 }
 
 export default function PageDetailPage() {
@@ -85,33 +60,6 @@ export default function PageDetailPage() {
       fetchPolicy: 'cache-and-network',
     })
 
-  // Vendor sections exist only for the matching page types — skip their
-  // queries until the page is loaded and the type matches.
-  const isDesigner = !!data?.page?.types.includes('DESIGNER')
-  const { data: designsData, refetch: refetchDesigns } =
-    useQuery<PageDesignsData>(PAGE_DESIGNS_QUERY, {
-      variables: { pageId: id },
-      skip: !id || !isDesigner,
-      fetchPolicy: 'cache-and-network',
-    })
-
-  const isCaterer = !!data?.page?.types.includes('CATERING')
-  const { data: offersData, refetch: refetchOffers } =
-    useQuery<PageCateringOffersData>(PAGE_CATERING_OFFERS_QUERY, {
-      variables: { pageId: id },
-      skip: !id || !isCaterer,
-      fetchPolicy: 'cache-and-network',
-    })
-
-  // Music & sound pages sell acts and list rentals in one Services section.
-  const hasOfferings = !!data?.page?.types.includes('MUSIC_SOUND')
-  const { data: offeringsData, refetch: refetchOfferings } =
-    useQuery<PageOfferingsData>(PAGE_OFFERINGS_QUERY, {
-      variables: { pageId: id },
-      skip: !id || !hasOfferings,
-      fetchPolicy: 'cache-and-network',
-    })
-
   if (loading && !data?.page) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -143,7 +91,9 @@ export default function PageDetailPage() {
           </div>
         </aside>
 
-        {/* Right column: composer (owner only) + the page's posts. */}
+        {/* Right column: composer (owner only) + the page's content tabs.
+            Vendor sections (Portfolio / Designs / Menu / Services / Catalog)
+            live inside ProfileTabs, driven by the page's types. */}
         <section className="flex flex-col gap-4">
           {isOwner && (
             <PostComposer
@@ -173,44 +123,8 @@ export default function PageDetailPage() {
                 />
               ) : undefined
             }
-            designs={isDesigner ? (designsData?.pageDesigns ?? []) : undefined}
-            canDeleteDesigns={isOwner}
-            onDesignDeleted={() => void refetchDesigns()}
-            designComposer={
-              isDesigner && isOwner ? (
-                <DesignComposer
-                  pageId={page.id}
-                  onCreated={() => void refetchDesigns()}
-                />
-              ) : undefined
-            }
-            cateringOffers={
-              isCaterer ? (offersData?.pageCateringOffers ?? []) : undefined
-            }
-            canDeleteOffers={isOwner}
-            onOfferDeleted={() => void refetchOffers()}
-            offerComposer={
-              isCaterer && isOwner ? (
-                <OfferComposer
-                  pageId={page.id}
-                  onCreated={() => void refetchOffers()}
-                />
-              ) : undefined
-            }
-            offerings={
-              hasOfferings ? (offeringsData?.pageOfferings ?? []) : undefined
-            }
-            canDeleteOfferings={isOwner}
-            onOfferingDeleted={() => void refetchOfferings()}
-            offeringComposer={
-              hasOfferings && isOwner ? (
-                <OfferingComposer
-                  pageId={page.id}
-                  pageTypes={page.types}
-                  onCreated={() => void refetchOfferings()}
-                />
-              ) : undefined
-            }
+            page={page}
+            isPageOwner={isOwner}
           />
         </section>
       </div>

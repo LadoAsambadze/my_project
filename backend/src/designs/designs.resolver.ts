@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Design } from './models/design.model';
 import { DesignsService } from './designs.service';
 import { CreateDesignInput } from './dto/create-design.input';
+import { UpdateDesignInput } from './dto/update-design.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt-access.strategy';
@@ -36,6 +37,14 @@ export class DesignsResolver {
     @Args('input') input: CreateDesignInput,
   ) {
     return this.designsService.create(current.userId, input);
+  }
+
+  @Mutation(() => Design, { description: 'Edit one of your designs.' })
+  updateDesign(
+    @CurrentUser() current: AuthenticatedUser,
+    @Args('input') input: UpdateDesignInput,
+  ) {
+    return this.designsService.update(current.userId, input);
   }
 
   @Mutation(() => Boolean, {

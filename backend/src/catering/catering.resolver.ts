@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CateringOffer } from './models/catering-offer.model';
 import { CateringService } from './catering.service';
 import { CreateCateringOfferInput } from './dto/create-catering-offer.input';
+import { UpdateCateringOfferInput } from './dto/update-catering-offer.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt-access.strategy';
@@ -38,6 +39,14 @@ export class CateringResolver {
     @Args('input') input: CreateCateringOfferInput,
   ) {
     return this.cateringService.create(current.userId, input);
+  }
+
+  @Mutation(() => CateringOffer, { description: 'Edit one of your menu offers.' })
+  updateCateringOffer(
+    @CurrentUser() current: AuthenticatedUser,
+    @Args('input') input: UpdateCateringOfferInput,
+  ) {
+    return this.cateringService.update(current.userId, input);
   }
 
   @Mutation(() => Boolean, {

@@ -2,14 +2,16 @@ import {
   ObjectType,
   Field,
   ID,
+  Int,
   GraphQLISODateTime,
   registerEnumType,
 } from '@nestjs/graphql';
-import { EventType } from '@prisma/client';
+import { EventType, RsvpStatus } from '@prisma/client';
 import { User } from '../../users/models/user.model';
 import { Page } from '../../pages/models/page.model';
 
 registerEnumType(EventType, { name: 'EventType' });
+registerEnumType(RsvpStatus, { name: 'RsvpStatus' });
 
 @ObjectType()
 export class Event {
@@ -65,4 +67,22 @@ export class Event {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  // Computed by field resolvers — not on the Prisma object, so optional in TS.
+  @Field(() => Int, { description: 'How many users are going.' })
+  goingCount?: number;
+
+  @Field(() => Int, { description: 'How many users are interested.' })
+  interestedCount?: number;
+
+  @Field(() => RsvpStatus, {
+    nullable: true,
+    description: "The signed-in viewer's RSVP (null when none).",
+  })
+  myRsvp?: RsvpStatus | null;
+
+  @Field(() => [User], {
+    description: 'A few users who are going (for the avatar row).',
+  })
+  attendees?: User[];
 }

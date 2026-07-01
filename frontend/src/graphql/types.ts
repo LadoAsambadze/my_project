@@ -108,6 +108,10 @@ export interface Post {
   // Set when the post was published as a page; null for personal posts.
   page: PagePreview | null
   media: PostMedia[]
+  // Engagement fields (present on queries that request them).
+  likesCount?: number
+  likedByMe?: boolean
+  commentsCount?: number
 }
 
 // Category of an event. Each type may later carry its own extra fields; for now
@@ -119,6 +123,8 @@ export type EventType =
   | 'HIKING'
   | 'CAMPING'
   | 'OTHER'
+
+export type RsvpStatus = 'GOING' | 'INTERESTED'
 
 // An event hosted by a user or one of their pages. Named EventItem to avoid
 // clashing with the DOM `Event` type. `page` is set when hosted as a page.
@@ -134,6 +140,15 @@ export interface EventItem {
   createdAt: string
   author: PostAuthor
   page: PagePreview | null
+  // RSVP fields (present on queries that request them).
+  goingCount?: number
+  interestedCount?: number
+  myRsvp?: RsvpStatus | null
+  attendees?: PostAuthor[]
+  // Engagement fields (present on queries that request them).
+  likesCount?: number
+  likedByMe?: boolean
+  commentsCount?: number
 }
 
 export interface CreateEventInput {
@@ -167,6 +182,13 @@ export interface UpdatePageInput {
   instruments?: string[]
 }
 
+// Engagement fields shared by all likeable/commentable content.
+export interface Engagement {
+  likesCount?: number
+  likedByMe?: boolean
+  commentsCount?: number
+}
+
 // A single photo of a design, in upload order.
 export interface DesignImage {
   id: string
@@ -177,7 +199,7 @@ export interface DesignImage {
 // A portfolio item published by a DESIGNER page. `occasion` is an id from the
 // DESIGN_OCCASIONS catalog (e.g. "WEDDING"); `priceFrom` is a starting price
 // in GEL. `page` links back to the designer for the browse grid.
-export interface Design {
+export interface Design extends Engagement {
   id: string
   title: string
   occasion: string
@@ -207,7 +229,7 @@ export interface CateringOfferImage {
 // A menu offer published by a CATERING page. `kind` is an id from the
 // CATERING_KINDS catalog (e.g. "FURSHET"); `pricePerPerson` is a per-guest
 // price in GEL.
-export interface CateringOffer {
+export interface CateringOffer extends Engagement {
   id: string
   title: string
   kind: string
@@ -238,7 +260,7 @@ export interface OfferingImage {
 // player, DJ set) or a rental listing (sound system, lighting).
 // `kind` is an id from the offering-kinds catalog; `priceFrom` is a starting
 // price in GEL.
-export interface Offering {
+export interface Offering extends Engagement {
   id: string
   title: string
   kind: string
@@ -256,6 +278,124 @@ export interface CreateOfferingInput {
   description?: string | null
   priceFrom?: number | null
   imageUrls: string[]
+}
+
+// A single photo/video of a portfolio work, in upload order.
+export interface WorkMedia {
+  id: string
+  url: string
+  type: MediaType
+  order: number
+}
+
+// A portfolio work published by a Photo & Video page: one shoot/project.
+// `workCategory` is the aliased `category` field (see WORK_FIELDS).
+export interface Work extends Engagement {
+  id: string
+  title: string
+  workCategory: string
+  description: string | null
+  priceFrom: number | null
+  media: WorkMedia[]
+  page: PagePreview
+  createdAt: string
+}
+
+export interface CreateWorkInput {
+  pageId: string
+  title: string
+  category: string
+  description?: string | null
+  priceFrom?: number | null
+  media: Array<{ url: string; type: MediaType }>
+}
+
+// A single photo of a florist catalog item, in upload order.
+export interface FloristItemImage {
+  id: string
+  url: string
+  order: number
+}
+
+// A catalog item published by a FLORIST page: one arrangement it sells.
+export interface FloristItem extends Engagement {
+  id: string
+  title: string
+  kind: string
+  description: string | null
+  priceFrom: number | null
+  images: FloristItemImage[]
+  page: PagePreview
+  createdAt: string
+}
+
+export interface CreateFloristItemInput {
+  pageId: string
+  title: string
+  kind: string
+  description?: string | null
+  priceFrom?: number | null
+  imageUrls: string[]
+}
+
+// Everything a user can like or comment on (matches the backend enum).
+export type ContentTarget =
+  | 'POST'
+  | 'EVENT'
+  | 'DESIGN'
+  | 'CATERING_OFFER'
+  | 'OFFERING'
+  | 'WORK'
+  | 'FLORIST_ITEM'
+  | 'REQUEST'
+
+// A comment on any content.
+export interface CommentItem {
+  id: string
+  body: string
+  createdAt: string
+  author: PostAuthor
+}
+
+// A demand post: a user describes what they need; vendors reply in comments.
+export interface RequestItem extends Engagement {
+  id: string
+  category: PageType
+  occasion: string | null
+  eventDate: string | null
+  city: string | null
+  budgetFrom: number | null
+  budgetTo: number | null
+  body: string
+  author: PostAuthor
+  createdAt: string
+}
+
+export interface CreateRequestInput {
+  category: PageType
+  occasion?: string | null
+  eventDate?: string | null
+  city?: string | null
+  budgetFrom?: number | null
+  budgetTo?: number | null
+  body: string
+}
+
+// One story of the unified news feed — discriminated by __typename.
+export type FeedItem =
+  | ({ __typename: 'Post' } & Post)
+  | ({ __typename: 'Event' } & EventItem)
+  | ({ __typename: 'Design' } & Design)
+  | ({ __typename: 'CateringOffer' } & CateringOffer)
+  | ({ __typename: 'Offering' } & Offering)
+  | ({ __typename: 'Work' } & Work)
+  | ({ __typename: 'FloristItem' } & FloristItem)
+  | ({ __typename: 'Request' } & RequestItem)
+
+export interface FeedPage {
+  items: FeedItem[]
+  nextCursor: string | null
+  hasMore: boolean
 }
 
 export interface AuthResponse {

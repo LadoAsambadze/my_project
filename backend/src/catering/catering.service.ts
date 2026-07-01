@@ -8,6 +8,7 @@ import { PageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PagesService } from '../pages/pages.service';
 import { CreateCateringOfferInput } from './dto/create-catering-offer.input';
+import { UpdateCateringOfferInput } from './dto/update-catering-offer.input';
 
 // Every offer we return carries its page (for the "by <page>" line) and its
 // photos in upload order.
@@ -47,6 +48,50 @@ export class CateringService {
             order,
           })),
         },
+      },
+      include: offerInclude,
+    });
+  }
+
+  /** Update an offer — only the owner of its page may. */
+  async update(authorId: string, input: UpdateCateringOfferInput) {
+    const offer = await this.prisma.cateringOffer.findUnique({
+      where: { id: input.offerId },
+      include: { page: true },
+    });
+    if (!offer) {
+      throw new NotFoundException('Offer not found');
+    }
+    if (offer.page.ownerId !== authorId) {
+      throw new ForbiddenException(
+        'You can only edit offers on your own pages',
+      );
+    }
+    return this.prisma.cateringOffer.update({
+      where: { id: offer.id },
+      data: {
+        title: input.title?.trim(),
+        kind: input.kind?.trim(),
+        description:
+          input.description === undefined
+            ? undefined
+            : input.description.trim() || null,
+        // -1 is the "clear the price" sentinel.
+        pricePerPerson:
+          input.pricePerPerson === undefined
+            ? undefined
+            : input.pricePerPerson < 0
+              ? null
+              : input.pricePerPerson,
+        images: input.imageUrls
+          ? {
+              deleteMany: {},
+              create: input.imageUrls.map((url, order) => ({
+                url: url.trim(),
+                order,
+              })),
+            }
+          : undefined,
       },
       include: offerInclude,
     });

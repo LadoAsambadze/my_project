@@ -3,10 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EventType } from '@prisma/client';
+import { EventType, RsvpStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PagesService } from '../pages/pages.service';
 import { CreateEventInput } from './dto/create-event.input';
+import { UpdateEventInput } from './dto/update-event.input';
 
 // Every event we return carries its author (for the host line) and its page
 // (set when hosted as a page).
@@ -46,6 +47,100 @@ export class EventsService {
       },
       include: eventInclude,
     });
+  }
+
+  /** A single event by id, or throws. */
+  async findById(id: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+      include: eventInclude,
+    });
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+    return event;
+  }
+
+  /** Update an event — only the author may. */
+  async update(authorId: string, input: UpdateEventInput) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: input.eventId },
+    });
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+    if (event.authorId !== authorId) {
+      throw new ForbiddenException('You can only edit your own events');
+    }
+    return this.prisma.event.update({
+      where: { id: event.id },
+      data: {
+        title: input.title?.trim(),
+        type: input.type,
+        subtype:
+          input.subtype === undefined
+            ? undefined
+            : input.subtype.trim() || null,
+        startsAt: input.startsAt,
+        location:
+          input.location === undefined
+            ? undefined
+            : input.location.trim() || null,
+        description:
+          input.description === undefined
+            ? undefined
+            : input.description.trim() || null,
+        coverUrl:
+          input.coverUrl === undefined
+            ? undefined
+            : input.coverUrl.trim() || null,
+      },
+      include: eventInclude,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // RSVP (going / interested)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Set the viewer's RSVP on an event: GOING or INTERESTED upserts the row,
+   * null withdraws it. Returns the event so the client cache updates.
+   */
+  async rsvp(userId: string, eventId: string, status: RsvpStatus | null) {
+    const event = await this.findById(eventId);
+    if (status === null) {
+      await this.prisma.eventRsvp.deleteMany({ where: { userId, eventId } });
+    } else {
+      await this.prisma.eventRsvp.upsert({
+        where: { userId_eventId: { userId, eventId } },
+        create: { userId, eventId, status },
+        update: { status },
+      });
+    }
+    return event;
+  }
+
+  countRsvps(eventId: string, status: RsvpStatus): Promise<number> {
+    return this.prisma.eventRsvp.count({ where: { eventId, status } });
+  }
+
+  async myRsvp(userId: string, eventId: string): Promise<RsvpStatus | null> {
+    const row = await this.prisma.eventRsvp.findUnique({
+      where: { userId_eventId: { userId, eventId } },
+    });
+    return row?.status ?? null;
+  }
+
+  /** A few going users, newest RSVP first — drives the avatar row. */
+  async attendees(eventId: string, limit = 6) {
+    const rows = await this.prisma.eventRsvp.findMany({
+      where: { eventId, status: RsvpStatus.GOING },
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+    return rows.map((r) => r.user);
   }
 
   /** Delete an event — only the author may. */

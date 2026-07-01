@@ -51,7 +51,12 @@ export class CateringOffer {
   })
   images: CateringOfferImage[];
 
-  @Field(() => Page, { description: 'The catering page that published it.' })
+  // Nullable in GraphQL (though always set) so it merges with Post.page
+  // inside the FeedItem union selection.
+  @Field(() => Page, {
+    nullable: true,
+    description: 'The catering page that published it.',
+  })
   page: Page;
 
   @Field(() => GraphQLISODateTime)

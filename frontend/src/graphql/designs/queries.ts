@@ -10,6 +10,9 @@ export const DESIGN_FIELDS = gql`
     description
     priceFrom
     createdAt
+    likesCount
+    likedByMe
+    commentsCount
     images {
       id
       url

@@ -20,6 +20,12 @@ enum MediaType {
   VIDEO
 }
 
+/// RSVP intent on an event: firmly going, or just interested.
+enum RsvpStatus {
+  GOING
+  INTERESTED
+}
+
 /// Thematic category a Page belongs to — the kind of event vendor it is.
 /// Extend by adding values here, to the frontend PageType union + catalogs,
 /// and to the `pageTypes` i18n namespace.
@@ -76,7 +82,10 @@ model User {
   pages       Page[] // thematic pages this user owns (Facebook-style Pages)
   pageFollows PageFollow[] @relation("UserPageFollows") // pages this user follows
   events      Event[] // events this user hosts (personal, or as one of their pages)
-  comments    Comment[] // comments this user wrote (on posts or designs)
+  comments    Comment[] // comments this user wrote (on any content)
+  likes       Like[] // likes this user gave (on any content)
+  rsvps       EventRsvp[] // events this user is going to / interested in
+  requests    Request[] // demand posts ("I need a photographer for ...")
 }
 
 /// A user-owned, thematic page (like a Facebook Page). For now it carries only
@@ -101,9 +110,78 @@ model Page {
   events         Event[] // events hosted by this page
   designs        Design[] // portfolio designs (DESIGNER pages only)
   cateringOffers CateringOffer[] // menu offers (CATERING pages only)
-  offerings      Offering[] // bookable services (MUSICIAN and EQUIPMENT pages)
+  offerings      Offering[] // bookable services (MUSIC_SOUND pages only)
+  works          Work[] // portfolio works (PHOTOGRAPHER pages only)
+  floristItems   FloristItem[] // catalog items (FLORIST pages only)
 
   @@index([ownerId])
+}
+
+/// A portfolio work published by a PHOTOGRAPHER ("Photo & Video") page: one
+/// shoot/project with its photos and/or videos. `category` is a label from
+/// the frontend catalog (e.g. "WEDDING"), mirroring Design.occasion.
+model Work {
+  id          String      @id @default(cuid())
+  pageId      String
+  page        Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title       String
+  category    String
+  description String?
+  priceFrom   Int?
+  media       WorkMedia[]
+  comments    Comment[]
+  likes       Like[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([pageId, createdAt])
+  @@index([category, createdAt])
+}
+
+/// A single photo or video of a work, in upload order.
+model WorkMedia {
+  id        String    @id @default(cuid())
+  workId    String
+  work      Work      @relation(fields: [workId], references: [id], onDelete: Cascade)
+  url       String
+  type      MediaType
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([workId])
+}
+
+/// A catalog item published by a FLORIST page: one arrangement it sells
+/// (wedding bouquet, table decor, arch...). `kind` is a label from the
+/// frontend catalog, mirroring Design.occasion.
+model FloristItem {
+  id          String             @id @default(cuid())
+  pageId      String
+  page        Page               @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title       String
+  kind        String
+  description String?
+  priceFrom   Int?
+  images      FloristItemImage[]
+  comments    Comment[]
+  likes       Like[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([pageId, createdAt])
+  @@index([kind, createdAt])
+}
+
+/// A single photo of a florist catalog item, in upload order.
+model FloristItemImage {
+  id        String      @id @default(cuid())
+  itemId    String
+  item      FloristItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  @@index([itemId])
 }
 
 /// A bookable service published by a MUSICIAN or EQUIPMENT page: a performer
@@ -120,6 +198,8 @@ model Offering {
   description String?
   priceFrom   Int?
   images      OfferingImage[]
+  comments    Comment[]
+  likes       Like[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -152,6 +232,8 @@ model CateringOffer {
   description    String?
   pricePerPerson Int?
   images         CateringOfferImage[]
+  comments       Comment[]
+  likes          Like[]
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
@@ -185,6 +267,7 @@ model Design {
   priceFrom   Int?
   images      DesignImage[]
   comments    Comment[]
+  likes       Like[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -232,6 +315,7 @@ model Post {
   body      String?
   media     PostMedia[]
   comments  Comment[]
+  likes     Like[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -271,6 +355,9 @@ model Event {
   location    String?
   coverUrl    String?
   startsAt    DateTime
+  comments    Comment[]
+  likes       Like[]
+  rsvps       EventRsvp[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -278,23 +365,123 @@ model Event {
   @@index([pageId, startsAt])
 }
 
-/// A comment written by a user on a post or on a design — exactly one of
-/// `postId` / `designId` is set (enforced in the service). On vendor content
-/// comments double as public questions/offers ("does the price include
-/// setup?"), so they attach to designs the same way they attach to posts.
+/// A user's RSVP on an event — going or interested. One row per (user, event);
+/// switching intent updates the row, withdrawing deletes it.
+model EventRsvp {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status    RsvpStatus
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, eventId])
+  @@index([eventId, status])
+}
+
+/// A comment written by a user on any content — exactly one target id is set
+/// (enforced in the service). On vendor content comments double as public
+/// questions/offers ("does the price include setup?"); on requests they are
+/// the vendors' replies.
 model Comment {
-  id        String   @id @default(cuid())
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  postId    String?
-  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  designId  String?
-  design    Design?  @relation(fields: [designId], references: [id], onDelete: Cascade)
-  body      String
-  createdAt DateTime @default(now())
+  id              String         @id @default(cuid())
+  authorId        String
+  author          User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId          String?
+  post            Post?          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  designId        String?
+  design          Design?        @relation(fields: [designId], references: [id], onDelete: Cascade)
+  eventId         String?
+  event           Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  cateringOfferId String?
+  cateringOffer   CateringOffer? @relation(fields: [cateringOfferId], references: [id], onDelete: Cascade)
+  offeringId      String?
+  offering        Offering?      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  workId          String?
+  work            Work?          @relation(fields: [workId], references: [id], onDelete: Cascade)
+  floristItemId   String?
+  floristItem     FloristItem?   @relation(fields: [floristItemId], references: [id], onDelete: Cascade)
+  requestId       String?
+  request         Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  body            String
+  createdAt       DateTime       @default(now())
 
   @@index([postId, createdAt])
   @@index([designId, createdAt])
+  @@index([eventId, createdAt])
+  @@index([cateringOfferId, createdAt])
+  @@index([offeringId, createdAt])
+  @@index([workId, createdAt])
+  @@index([floristItemId, createdAt])
+  @@index([requestId, createdAt])
+}
+
+/// A like from a user on any content — exactly one target id is set (enforced
+/// in the service). One like per (user, target), removed on unlike.
+model Like {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId          String?
+  post            Post?          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  designId        String?
+  design          Design?        @relation(fields: [designId], references: [id], onDelete: Cascade)
+  eventId         String?
+  event           Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  cateringOfferId String?
+  cateringOffer   CateringOffer? @relation(fields: [cateringOfferId], references: [id], onDelete: Cascade)
+  offeringId      String?
+  offering        Offering?      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  workId          String?
+  work            Work?          @relation(fields: [workId], references: [id], onDelete: Cascade)
+  floristItemId   String?
+  floristItem     FloristItem?   @relation(fields: [floristItemId], references: [id], onDelete: Cascade)
+  requestId       String?
+  request         Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+
+  @@unique([userId, postId])
+  @@unique([userId, designId])
+  @@unique([userId, eventId])
+  @@unique([userId, cateringOfferId])
+  @@unique([userId, offeringId])
+  @@unique([userId, workId])
+  @@unique([userId, floristItemId])
+  @@unique([userId, requestId])
+  @@index([postId])
+  @@index([designId])
+  @@index([eventId])
+  @@index([cateringOfferId])
+  @@index([offeringId])
+  @@index([workId])
+  @@index([floristItemId])
+  @@index([requestId])
+}
+
+/// A demand post: a user describes what they need for their event ("looking
+/// for a photographer, Sept 14, Tbilisi, budget 800₾") and vendor pages of
+/// the matching category discover it and reply in the comments. `category`
+/// targets a vendor type; the occasion label comes from the frontend catalog.
+model Request {
+  id         String    @id @default(cuid())
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category   PageType
+  occasion   String?
+  eventDate  DateTime?
+  city       String?
+  budgetFrom Int?
+  budgetTo   Int?
+  body       String
+  comments   Comment[]
+  likes      Like[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([category, createdAt])
+  @@index([authorId, createdAt])
+  @@index([createdAt])
 }
 
 /// A directed follow edge: `follower` follows `following`. One row per pair

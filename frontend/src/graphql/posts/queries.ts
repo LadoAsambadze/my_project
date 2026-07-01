@@ -7,6 +7,9 @@ export const POST_FIELDS = gql`
     id
     body
     createdAt
+    likesCount
+    likedByMe
+    commentsCount
     author {
       id
       username

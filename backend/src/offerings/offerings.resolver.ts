@@ -3,6 +3,7 @@ import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Offering } from './models/offering.model';
 import { OfferingsService } from './offerings.service';
 import { CreateOfferingInput } from './dto/create-offering.input';
+import { UpdateOfferingInput } from './dto/update-offering.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt-access.strategy';
@@ -39,6 +40,14 @@ export class OfferingsResolver {
     @Args('input') input: CreateOfferingInput,
   ) {
     return this.offeringsService.create(current.userId, input);
+  }
+
+  @Mutation(() => Offering, { description: 'Edit one of your offerings.' })
+  updateOffering(
+    @CurrentUser() current: AuthenticatedUser,
+    @Args('input') input: UpdateOfferingInput,
+  ) {
+    return this.offeringsService.update(current.userId, input);
   }
 
   @Mutation(() => Boolean, {

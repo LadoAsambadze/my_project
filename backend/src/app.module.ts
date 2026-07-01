@@ -12,6 +12,12 @@ import { EventsModule } from './events/events.module';
 import { DesignsModule } from './designs/designs.module';
 import { CateringModule } from './catering/catering.module';
 import { OfferingsModule } from './offerings/offerings.module';
+import { WorksModule } from './works/works.module';
+import { FloristModule } from './florist/florist.module';
+import { LikesModule } from './likes/likes.module';
+import { CommentsModule } from './comments/comments.module';
+import { RequestsModule } from './requests/requests.module';
+import { FeedModule } from './feed/feed.module';
 
 @Module({
   imports: [
@@ -39,6 +45,12 @@ import { OfferingsModule } from './offerings/offerings.module';
     DesignsModule,
     CateringModule,
     OfferingsModule,
+    WorksModule,
+    FloristModule,
+    LikesModule,
+    CommentsModule,
+    RequestsModule,
+    FeedModule,
   ],
 })
 export class AppModule {}

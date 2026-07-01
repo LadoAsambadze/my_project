@@ -6,26 +6,11 @@ import { Trash2 } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import type { Post } from '@/graphql/types'
 import { DELETE_POST_MUTATION } from '@/graphql/posts/mutations'
+import { formatTimeAgo } from '@/lib/time'
 import { Avatar } from '@/components/profile/avatar'
 import { PageTypeBadges } from '@/components/pages/page-type-badges'
 import { PostMediaView } from '@/components/posts/post-media'
-
-function formatTimeAgo(iso: string, locale: string): string {
-  const date = new Date(iso)
-  const seconds = Math.round((Date.now() - date.getTime()) / 1000)
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
-  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
-    ['year', 60 * 60 * 24 * 365],
-    ['month', 60 * 60 * 24 * 30],
-    ['day', 60 * 60 * 24],
-    ['hour', 60 * 60],
-    ['minute', 60],
-  ]
-  for (const [unit, secs] of units) {
-    if (seconds >= secs) return rtf.format(-Math.floor(seconds / secs), unit)
-  }
-  return rtf.format(-Math.max(seconds, 1), 'second')
-}
+import { EngagementBar } from '@/components/engagement/engagement-bar'
 
 interface PostCardProps {
   post: Post
@@ -119,6 +104,17 @@ export function PostCard({ post, currentUserId, onDeleted }: PostCardProps) {
           <PostMediaView media={post.media} />
         </div>
       )}
+
+      <div className="mt-3">
+        <EngagementBar
+          target="POST"
+          targetId={post.id}
+          likesCount={post.likesCount}
+          likedByMe={post.likedByMe}
+          commentsCount={post.commentsCount}
+          currentUserId={currentUserId}
+        />
+      </div>
     </article>
   )
 }

@@ -8,6 +8,7 @@ import { PageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PagesService } from '../pages/pages.service';
 import { CreateDesignInput } from './dto/create-design.input';
+import { UpdateDesignInput } from './dto/update-design.input';
 
 // Every design we return carries its page (for the "by <page>" line in the
 // browse grid) and its photos in upload order.
@@ -47,6 +48,50 @@ export class DesignsService {
             order,
           })),
         },
+      },
+      include: designInclude,
+    });
+  }
+
+  /** Update a design — only the owner of its page may. */
+  async update(authorId: string, input: UpdateDesignInput) {
+    const design = await this.prisma.design.findUnique({
+      where: { id: input.designId },
+      include: { page: true },
+    });
+    if (!design) {
+      throw new NotFoundException('Design not found');
+    }
+    if (design.page.ownerId !== authorId) {
+      throw new ForbiddenException(
+        'You can only edit designs on your own pages',
+      );
+    }
+    return this.prisma.design.update({
+      where: { id: design.id },
+      data: {
+        title: input.title?.trim(),
+        occasion: input.occasion?.trim(),
+        description:
+          input.description === undefined
+            ? undefined
+            : input.description.trim() || null,
+        // -1 is the "clear the price" sentinel.
+        priceFrom:
+          input.priceFrom === undefined
+            ? undefined
+            : input.priceFrom < 0
+              ? null
+              : input.priceFrom,
+        images: input.imageUrls
+          ? {
+              deleteMany: {},
+              create: input.imageUrls.map((url, order) => ({
+                url: url.trim(),
+                order,
+              })),
+            }
+          : undefined,
       },
       include: designInclude,
     });

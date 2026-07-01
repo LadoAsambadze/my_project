@@ -9,6 +9,9 @@ export const OFFERING_FIELDS = gql`
     description
     priceFrom
     createdAt
+    likesCount
+    likedByMe
+    commentsCount
     images {
       id
       url

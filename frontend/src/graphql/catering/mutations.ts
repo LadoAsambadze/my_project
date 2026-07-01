@@ -10,6 +10,15 @@ export const CREATE_CATERING_OFFER_MUTATION = gql`
   }
 `
 
+export const UPDATE_CATERING_OFFER_MUTATION = gql`
+  ${CATERING_OFFER_FIELDS}
+  mutation UpdateCateringOffer($input: UpdateCateringOfferInput!) {
+    updateCateringOffer(input: $input) {
+      ...CateringOfferFields
+    }
+  }
+`
+
 export const DELETE_CATERING_OFFER_MUTATION = gql`
   mutation DeleteCateringOffer($id: ID!) {
     deleteCateringOffer(id: $id)
