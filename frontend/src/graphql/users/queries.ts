@@ -6,7 +6,7 @@ export const PROFILE_PAGE_FIELDS = gql`
   fragment ProfilePageFields on Page {
     id
     name
-    type
+    types
     photoUrl
     postsCount
   }

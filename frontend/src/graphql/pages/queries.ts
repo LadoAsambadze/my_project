@@ -5,8 +5,12 @@ export const PAGE_FIELDS = gql`
   fragment PageFields on Page {
     id
     name
-    type
+    types
     photoUrl
+    phone
+    whatsapp
+    telegram
+    instruments
     postsCount
     followersCount
     isFollowedByMe

@@ -1,6 +1,10 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { PageType } from '@prisma/client';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsEnum,
   IsOptional,
   IsString,
@@ -16,13 +20,17 @@ export class CreatePageInput {
   @MaxLength(80)
   name: string;
 
-  @Field(() => PageType, {
-    nullable: true,
-    description: 'Thematic category. Defaults to PHOTOGRAPHER if omitted.',
+  @Field(() => [PageType], {
+    description: 'Vendor categories — at least one, no duplicates.',
   })
-  @IsOptional()
-  @IsEnum(PageType)
-  type?: PageType;
+  @IsArray()
+  @ArrayMinSize(1)
+  // A page can carry every category at most — track the enum so adding a new
+  // PageType never silently breaks this cap.
+  @ArrayMaxSize(Object.keys(PageType).length)
+  @ArrayUnique()
+  @IsEnum(PageType, { each: true })
+  types: PageType[];
 
   @Field(() => String, {
     nullable: true,

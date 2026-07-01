@@ -7,10 +7,12 @@ import { useAuth } from '@/lib/auth/auth-context'
 import { Card, CardContent } from '@/components/ui/card'
 import { MY_PROFILE_QUERY } from '@/graphql/users/queries'
 import { FEED_QUERY } from '@/graphql/posts/queries'
-import type { AuthUser, Post } from '@/graphql/types'
+import { EVENTS_FEED_QUERY } from '@/graphql/events/queries'
+import type { AuthUser, EventItem, Post } from '@/graphql/types'
 import { ProfileCard } from '@/components/profile/profile-card'
 import { PostComposer } from '@/components/posts/post-composer'
-import { PostFeed } from '@/components/posts/post-feed'
+import { PostCard } from '@/components/posts/post-card'
+import { EventCard } from '@/components/events/event-card'
 
 interface MyProfileData {
   me: AuthUser
@@ -19,6 +21,15 @@ interface MyProfileData {
 interface FeedData {
   feed: Post[]
 }
+
+interface EventsFeedData {
+  eventsFeed: EventItem[]
+}
+
+// One news-feed story: a post or an event, interleaved by creation time.
+type FeedEntry =
+  | { kind: 'post'; createdAt: string; post: Post }
+  | { kind: 'event'; createdAt: string; event: EventItem }
 
 export default function DashboardPage() {
   const t = useTranslations('dashboard')
@@ -35,7 +46,27 @@ export default function DashboardPage() {
   const { data, refetch } = useQuery<FeedData>(FEED_QUERY, {
     fetchPolicy: 'cache-and-network',
   })
+  const { data: eventsData, refetch: refetchEvents } =
+    useQuery<EventsFeedData>(EVENTS_FEED_QUERY, {
+      fetchPolicy: 'cache-and-network',
+    })
   const posts = data?.feed ?? []
+  const events = eventsData?.eventsFeed ?? []
+
+  // Interleave posts and events into one stream, newest first — an event shows
+  // up in the feed when it's created, just like a post.
+  const entries: FeedEntry[] = [
+    ...posts.map(
+      (post): FeedEntry => ({ kind: 'post', createdAt: post.createdAt, post }),
+    ),
+    ...events.map(
+      (event): FeedEntry => ({
+        kind: 'event',
+        createdAt: event.createdAt,
+        event,
+      }),
+    ),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   const quickActions = [
     { icon: CalendarHeart, title: t('newParty'), body: t('newPartyDesc') },
@@ -66,12 +97,29 @@ export default function DashboardPage() {
         {/* Center column: the news feed, from the top. */}
         <section className="order-1 flex flex-col gap-4 lg:order-2">
           <PostComposer onCreated={() => void refetch()} />
-          <PostFeed
-            posts={posts}
-            currentUserId={user?.id}
-            emptyLabel={tp('feedEmpty')}
-            onDeleted={() => void refetch()}
-          />
+          {entries.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {tp('feedEmpty')}
+            </p>
+          ) : (
+            entries.map((entry) =>
+              entry.kind === 'post' ? (
+                <PostCard
+                  key={`post-${entry.post.id}`}
+                  post={entry.post}
+                  currentUserId={user?.id}
+                  onDeleted={() => void refetch()}
+                />
+              ) : (
+                <EventCard
+                  key={`event-${entry.event.id}`}
+                  event={entry.event}
+                  currentUserId={user?.id}
+                  onDeleted={() => void refetchEvents()}
+                />
+              ),
+            )
+          )}
         </section>
 
         {/* Right column: quick-action cards (events, flowers, invitations). */}

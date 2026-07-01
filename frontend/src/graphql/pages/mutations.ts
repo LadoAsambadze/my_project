@@ -10,6 +10,17 @@ export const CREATE_PAGE_MUTATION = gql`
   }
 `
 
+// Returns the full page so Apollo updates the cached Page (normalized by id)
+// and the header/cards react immediately.
+export const UPDATE_PAGE_MUTATION = gql`
+  ${PAGE_FIELDS}
+  mutation UpdatePage($input: UpdatePageInput!) {
+    updatePage(input: $input) {
+      ...PageFields
+    }
+  }
+`
+
 export const DELETE_PAGE_MUTATION = gql`
   mutation DeletePage($id: ID!) {
     deletePage(id: $id)

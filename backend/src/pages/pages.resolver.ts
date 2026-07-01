@@ -12,6 +12,7 @@ import {
 import { Page } from './models/page.model';
 import { PagesService } from './pages.service';
 import { CreatePageInput } from './dto/create-page.input';
+import { UpdatePageInput } from './dto/update-page.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt-access.strategy';
@@ -50,6 +51,17 @@ export class PagesResolver {
     @Args('input') input: CreatePageInput,
   ) {
     return this.pagesService.create(current.userId, input);
+  }
+
+  @Mutation(() => Page, {
+    description:
+      'Update one of your own pages (name, types, photo, contact links).',
+  })
+  updatePage(
+    @CurrentUser() current: AuthenticatedUser,
+    @Args('input') input: UpdatePageInput,
+  ) {
+    return this.pagesService.update(current.userId, input);
   }
 
   @Mutation(() => Boolean, { description: 'Delete one of your own pages.' })

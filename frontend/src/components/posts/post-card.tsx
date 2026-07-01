@@ -6,8 +6,8 @@ import { Trash2 } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import type { Post } from '@/graphql/types'
 import { DELETE_POST_MUTATION } from '@/graphql/posts/mutations'
-import { PAGE_TYPE_ICONS } from '@/lib/page-types'
 import { Avatar } from '@/components/profile/avatar'
+import { PageTypeBadges } from '@/components/pages/page-type-badges'
 import { PostMediaView } from '@/components/posts/post-media'
 
 function formatTimeAgo(iso: string, locale: string): string {
@@ -37,7 +37,6 @@ interface PostCardProps {
 
 export function PostCard({ post, currentUserId, onDeleted }: PostCardProps) {
   const t = useTranslations('posts')
-  const tt = useTranslations('pageTypes')
   const locale = useLocale()
 
   const [deletePost, { loading: deleting }] = useMutation(DELETE_POST_MUTATION, {
@@ -64,8 +63,6 @@ export function PostCard({ post, currentUserId, onDeleted }: PostCardProps) {
     : author.username
       ? `/u/${author.username}`
       : '/profile'
-  // For page posts, the icon for the page's type sits next to its name.
-  const TypeIcon = page ? PAGE_TYPE_ICONS[page.type] : null
   const isMine = currentUserId === author.id
 
   return (
@@ -81,11 +78,12 @@ export function PostCard({ post, currentUserId, onDeleted }: PostCardProps) {
                 {displayName}
               </span>
             </Link>
-            {page && TypeIcon && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-                <TypeIcon className="h-3 w-3" />
-                {tt(page.type)}
-              </span>
+            {page && (
+              <PageTypeBadges
+                types={page.types}
+                size="sm"
+                className="shrink-0"
+              />
             )}
           </div>
           <time

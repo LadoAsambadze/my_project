@@ -148,32 +148,39 @@ export function ProfileCard({
               </Link>
             ) : (
               <ul className="flex flex-col gap-1">
-                {pages.map((page) => {
-                  const Icon = PAGE_TYPE_ICONS[page.type]
-                  return (
-                    <li key={page.id}>
-                      <Link
-                        href={`/pages/${page.id}`}
-                        className="-mx-1.5 flex items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-accent"
-                      >
-                        <Avatar
-                          src={page.photoUrl}
-                          name={page.name}
-                          size="sm"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {page.name}
-                          </p>
-                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Icon className="h-3 w-3 shrink-0" />
-                            {tt(page.type)}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
-                  )
-                })}
+                {pages.map((page) => (
+                  <li key={page.id}>
+                    <Link
+                      href={`/pages/${page.id}`}
+                      className="-mx-1.5 flex items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-accent"
+                    >
+                      <Avatar
+                        src={page.photoUrl}
+                        name={page.name}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {page.name}
+                        </p>
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                          {page.types.map((type) => {
+                            const Icon = PAGE_TYPE_ICONS[type]
+                            return (
+                              <span
+                                key={type}
+                                className="inline-flex items-center gap-1"
+                              >
+                                <Icon className="h-3 w-3 shrink-0" />
+                                {tt(type)}
+                              </span>
+                            )
+                          })}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

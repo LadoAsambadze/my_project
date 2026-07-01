@@ -8,9 +8,128 @@ type AuthPayload {
   user: User!
 }
 
+type CateringOffer {
+  createdAt: DateTime!
+
+  """Optional longer description (what the menu includes)."""
+  description: String
+  id: ID!
+
+  """Photos of the offer, in upload order."""
+  images: [CateringOfferImage!]!
+
+  """
+  Kind label from the frontend catalog (e.g. "FURSHET"), mirroring Design.occasion.
+  """
+  kind: String!
+
+  """The catering page that published it."""
+  page: Page!
+
+  """Optional per-guest price in GEL."""
+  pricePerPerson: Int
+
+  """Title of the offer."""
+  title: String!
+  updatedAt: DateTime!
+}
+
+type CateringOfferImage {
+  id: ID!
+
+  """Position in the upload order."""
+  order: Int!
+
+  """URL of the photo, served from /uploads."""
+  url: String!
+}
+
 input ChangePasswordInput {
   currentPassword: String
   newPassword: String!
+}
+
+input CreateCateringOfferInput {
+  description: String
+
+  """Photo URLs returned by the /uploads endpoint, in display order."""
+  imageUrls: [String!]!
+
+  """Kind label from the frontend catalog (e.g. "FURSHET")."""
+  kind: String!
+
+  """The CATERING page to publish under (you must own it)."""
+  pageId: ID!
+
+  """Optional per-guest price in GEL."""
+  pricePerPerson: Int
+
+  """Title of the offer."""
+  title: String!
+}
+
+input CreateDesignInput {
+  description: String
+
+  """Photo URLs returned by the /uploads endpoint, in display order."""
+  imageUrls: [String!]!
+
+  """Occasion label from the frontend catalog (e.g. "WEDDING")."""
+  occasion: String!
+
+  """The DESIGNER page to publish under (you must own it)."""
+  pageId: ID!
+
+  """Optional starting price in GEL."""
+  priceFrom: Int
+
+  """Title of the design."""
+  title: String!
+}
+
+input CreateEventInput {
+  """Cover photo URL returned by the /uploads endpoint."""
+  coverUrl: String
+  description: String
+  location: String
+
+  """
+  Host the event as this page (you must own it). Omit for a personal event.
+  """
+  pageId: ID
+
+  """When the event takes place."""
+  startsAt: DateTime!
+
+  """Second-level category within `type` (e.g. "TENNIS" for SPORT)."""
+  subtype: String
+
+  """Title of the event."""
+  title: String!
+
+  """Category of the event. Defaults to OTHER if omitted."""
+  type: EventType
+}
+
+input CreateOfferingInput {
+  description: String
+
+  """Photo URLs returned by the /uploads endpoint, in display order."""
+  imageUrls: [String!]!
+
+  """
+  Kind label from the frontend catalog (e.g. "SAXOPHONE", "SOUND_SYSTEM").
+  """
+  kind: String!
+
+  """The MUSIC_SOUND page to publish under (you must own it)."""
+  pageId: ID!
+
+  """Optional starting price in GEL."""
+  priceFrom: Int
+
+  """Title of the offering."""
+  title: String!
 }
 
 input CreatePageInput {
@@ -20,8 +139,8 @@ input CreatePageInput {
   """URL returned by the /uploads endpoint for the page photo."""
   photoUrl: String
 
-  """Thematic category. Defaults to PHOTOGRAPHER if omitted."""
-  type: PageType
+  """Vendor categories — at least one, no duplicates."""
+  types: [PageType!]!
 }
 
 input CreatePostInput {
@@ -38,6 +157,85 @@ input CreatePostInput {
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type Design {
+  createdAt: DateTime!
+
+  """Optional longer description."""
+  description: String
+  id: ID!
+
+  """Photos of the design, in upload order."""
+  images: [DesignImage!]!
+
+  """
+  Occasion label from the frontend catalog (e.g. "WEDDING"), mirroring Event.subtype.
+  """
+  occasion: String!
+
+  """The designer page that published it."""
+  page: Page!
+
+  """Optional starting price in GEL (shown as "from X ₾")."""
+  priceFrom: Int
+
+  """Title of the design."""
+  title: String!
+  updatedAt: DateTime!
+}
+
+type DesignImage {
+  id: ID!
+
+  """Position in the upload order."""
+  order: Int!
+
+  """URL of the photo, served from /uploads."""
+  url: String!
+}
+
+type Event {
+  """The user who created the event."""
+  author: User!
+
+  """URL of the cover photo, served from /uploads."""
+  coverUrl: String
+  createdAt: DateTime!
+
+  """Optional longer description."""
+  description: String
+  id: ID!
+
+  """Optional human-readable location."""
+  location: String
+
+  """Set when the event is hosted as a page; null for a personal event."""
+  page: Page
+
+  """When the event takes place."""
+  startsAt: DateTime!
+
+  """
+  Second-level category within `type` (e.g. "TENNIS" for SPORT); null when the type has no subtypes.
+  """
+  subtype: String
+
+  """Title of the event."""
+  title: String!
+
+  """Category of the event."""
+  type: EventType!
+  updatedAt: DateTime!
+}
+
+enum EventType {
+  BIRTHDAY
+  CAMPING
+  HIKING
+  OTHER
+  PARTY
+  SPORT
+}
 
 input LoginInput {
   email: String!
@@ -60,11 +258,35 @@ type Mutation {
   """
   changePassword(input: ChangePasswordInput!): Boolean!
 
+  """Publish a menu offer under one of your catering pages."""
+  createCateringOffer(input: CreateCateringOfferInput!): CateringOffer!
+
+  """Publish a design under one of your designer pages."""
+  createDesign(input: CreateDesignInput!): Design!
+
+  """Create an event."""
+  createEvent(input: CreateEventInput!): Event!
+
+  """Publish an offering under one of your musician or equipment pages."""
+  createOffering(input: CreateOfferingInput!): Offering!
+
   """Create a page with a name, type, and optional photo."""
   createPage(input: CreatePageInput!): Page!
 
   """Create a post with text and/or uploaded media."""
   createPost(input: CreatePostInput!): Post!
+
+  """Delete a menu offer from one of your own pages."""
+  deleteCateringOffer(id: ID!): Boolean!
+
+  """Delete a design from one of your own pages."""
+  deleteDesign(id: ID!): Boolean!
+
+  """Delete one of your own events."""
+  deleteEvent(id: ID!): Boolean!
+
+  """Delete an offering from one of your own pages."""
+  deleteOffering(id: ID!): Boolean!
 
   """Delete one of your own pages."""
   deletePage(id: ID!): Boolean!
@@ -119,6 +341,9 @@ type Mutation {
   """Unfollow a page."""
   unfollowPage(pageId: ID!): Page!
 
+  """Update one of your own pages (name, types, photo, contact links)."""
+  updatePage(input: UpdatePageInput!): Page!
+
   """Update the signed-in user's profile."""
   updateProfile(input: UpdateProfileInput!): User!
 
@@ -128,12 +353,53 @@ type Mutation {
   verifyEmail(input: VerifyEmailInput!): AuthPayload!
 }
 
+type Offering {
+  createdAt: DateTime!
+
+  """Optional longer description."""
+  description: String
+  id: ID!
+
+  """Photos of the offering, in upload order."""
+  images: [OfferingImage!]!
+
+  """
+  Kind label from the frontend catalog (e.g. "SAXOPHONE", "SOUND_SYSTEM").
+  """
+  kind: String!
+
+  """The page that published it."""
+  page: Page!
+
+  """Optional starting price in GEL (shown as "from X ₾")."""
+  priceFrom: Int
+
+  """Title of the offering."""
+  title: String!
+  updatedAt: DateTime!
+}
+
+type OfferingImage {
+  id: ID!
+
+  """Position in the upload order."""
+  order: Int!
+
+  """URL of the photo, served from /uploads."""
+  url: String!
+}
+
 type Page {
   createdAt: DateTime!
 
   """Number of users following this page."""
   followersCount: Int!
   id: ID!
+
+  """
+  What a MUSIC_SOUND page plays — ids from the frontend instruments catalog (e.g. "SAXOPHONE"). Empty for other pages.
+  """
+  instruments: [String!]!
 
   """
   Whether the signed-in viewer follows this page (false when signed out).
@@ -146,18 +412,33 @@ type Page {
   """The user who created and owns the page."""
   owner: User!
 
+  """Contact phone, rendered as a tel: link."""
+  phone: String
+
   """URL of the page photo, served from /uploads."""
   photoUrl: String
 
   """Number of posts published by this page."""
   postsCount: Int!
 
-  """Thematic category of the page."""
-  type: PageType!
+  """Telegram username without the @ (t.me link)."""
+  telegram: String
+
+  """
+  Vendor categories of the page — one or more (a page can be e.g. both a photographer and light & sound).
+  """
+  types: [PageType!]!
   updatedAt: DateTime!
+
+  """WhatsApp number in international format (wa.me link)."""
+  whatsapp: String
 }
 
 enum PageType {
+  CATERING
+  DESIGNER
+  FLORIST
+  MUSIC_SOUND
   PHOTOGRAPHER
 }
 
@@ -195,6 +476,19 @@ input PostMediaInput {
 }
 
 type Query {
+  """
+  Browse menu offers across all catering pages, newest first, optionally filtered by kind.
+  """
+  cateringOffers(kind: String): [CateringOffer!]!
+
+  """
+  Browse designs across all designer pages, newest first, optionally filtered by occasion.
+  """
+  designs(occasion: String): [Design!]!
+
+  """Global events feed: everyone's events, newest first."""
+  eventsFeed: [Event!]!
+
   """Global news feed: everyone's posts, newest first."""
   feed: [Post!]!
   me: User!
@@ -202,8 +496,25 @@ type Query {
   """The signed-in user's own pages, newest first."""
   myPages: [Page!]!
 
+  """
+  Browse offerings across all musician/equipment pages, newest first, optionally filtered by kind.
+  """
+  offerings(kind: String): [Offering!]!
+
   """Fetch a single page by id."""
   page(id: ID!): Page!
+
+  """A page's menu offers, newest first."""
+  pageCateringOffers(pageId: ID!): [CateringOffer!]!
+
+  """A page's designs, newest first."""
+  pageDesigns(pageId: ID!): [Design!]!
+
+  """A page's events, soonest first."""
+  pageEvents(pageId: ID!): [Event!]!
+
+  """A page's offerings, newest first."""
+  pageOfferings(pageId: ID!): [Offering!]!
 
   """A page's posts, newest first."""
   pagePosts(pageId: ID!): [Post!]!
@@ -216,6 +527,9 @@ type Query {
 
   """Fetch a user by their @username."""
   user(username: String!): User!
+
+  """A user's events, soonest first."""
+  userEvents(username: String!): [Event!]!
 
   """A user's posts, newest first."""
   userPosts(username: String!): [Post!]!
@@ -239,6 +553,34 @@ input ResetPasswordInput {
 enum Role {
   ADMIN
   USER
+}
+
+input UpdatePageInput {
+  """
+  Instruments a MUSIC_SOUND page plays (catalog ids, e.g. "SAXOPHONE"); pass an empty list to clear.
+  """
+  instruments: [String!]
+
+  """New display name."""
+  name: String
+
+  """The page to update (you must own it)."""
+  pageId: ID!
+
+  """Contact phone; empty string clears it."""
+  phone: String
+
+  """New photo URL from /uploads; pass an empty string to remove the photo."""
+  photoUrl: String
+
+  """Telegram username (with or without @); empty string clears it."""
+  telegram: String
+
+  """New vendor categories — at least one, no duplicates."""
+  types: [PageType!]
+
+  """WhatsApp number; empty string clears it."""
+  whatsapp: String
 }
 
 input UpdateProfileInput {

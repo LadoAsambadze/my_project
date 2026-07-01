@@ -1,28 +1,24 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useMutation } from '@apollo/client/react'
-import { Trash2 } from 'lucide-react'
-import { useRouter, Link } from '@/i18n/navigation'
+import { MessageCircle, Phone, Send, Settings } from 'lucide-react'
+import { Link } from '@/i18n/navigation'
 import type { Page } from '@/graphql/types'
-import { DELETE_PAGE_MUTATION } from '@/graphql/pages/mutations'
-import { MY_PAGES_QUERY, PAGES_QUERY } from '@/graphql/pages/queries'
-import { PAGE_TYPE_ICONS } from '@/lib/page-types'
+import { offeringKindIcon } from '@/lib/offering-kinds'
 import { Avatar } from '@/components/profile/avatar'
 import { Button } from '@/components/ui/button'
 import { PageFollowButton } from '@/components/pages/page-follow-button'
+import { PageTypeBadges } from '@/components/pages/page-type-badges'
 
 interface PageHeaderProps {
   page: Page
-  /** True when the signed-in user owns this page (shows the delete control). */
+  /** True when the signed-in user owns this page (shows the settings link). */
   isOwner: boolean
 }
 
 export function PageHeader({ page, isOwner }: PageHeaderProps) {
   const t = useTranslations('pages')
-  const tt = useTranslations('pageTypes')
-  const router = useRouter()
-  const TypeIcon = PAGE_TYPE_ICONS[page.type]
+  const tk = useTranslations('offeringKinds')
 
   const ownerName = [page.owner.firstName, page.owner.lastName]
     .filter(Boolean)
@@ -32,11 +28,37 @@ export function PageHeader({ page, isOwner }: PageHeaderProps) {
     ? `/u/${page.owner.username}`
     : '/profile'
 
-  const [deletePage, { loading: deleting }] = useMutation(DELETE_PAGE_MUTATION, {
-    variables: { id: page.id },
-    refetchQueries: [{ query: MY_PAGES_QUERY }, { query: PAGES_QUERY }],
-    onCompleted: () => router.push('/pages'),
-  })
+  // Contact links: phone dials, WhatsApp wants digits only, Telegram wants the
+  // bare username (stored without @).
+  const contacts = [
+    page.phone && {
+      key: 'phone',
+      label: t('call'),
+      icon: Phone,
+      href: `tel:${page.phone.replace(/\s+/g, '')}`,
+      external: false,
+    },
+    page.whatsapp && {
+      key: 'whatsapp',
+      label: 'WhatsApp',
+      icon: MessageCircle,
+      href: `https://wa.me/${page.whatsapp.replace(/\D/g, '')}`,
+      external: true,
+    },
+    page.telegram && {
+      key: 'telegram',
+      label: 'Telegram',
+      icon: Send,
+      href: `https://t.me/${page.telegram}`,
+      external: true,
+    },
+  ].filter(Boolean) as Array<{
+    key: string
+    label: string
+    icon: typeof Phone
+    href: string
+    external: boolean
+  }>
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -48,29 +70,54 @@ export function PageHeader({ page, isOwner }: PageHeaderProps) {
           className="ring-4 ring-card shadow-md"
         />
         <h1 className="text-xl font-bold">{page.name}</h1>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-          <TypeIcon className="h-3.5 w-3.5" />
-          {tt(page.type)}
-        </span>
+        <PageTypeBadges types={page.types} className="justify-center" />
+
+        {/* What a musician page plays, e.g. saxophone + piano. */}
+        {page.instruments.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {page.instruments.map((id) => {
+              const Icon = offeringKindIcon(id)
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+                >
+                  <Icon className="h-3 w-3" />
+                  {tk(id)}
+                </span>
+              )
+            })}
+          </div>
+        )}
 
         <div className="flex gap-4 text-sm text-muted-foreground">
           <span>{t('postsCount', { count: page.postsCount ?? 0 })}</span>
           <span>{t('followersCount', { count: page.followersCount ?? 0 })}</span>
         </div>
 
+        {contacts.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {contacts.map(({ key, label, icon: Icon, href, external }) => (
+              <a
+                key={key}
+                href={href}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noopener noreferrer' : undefined}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
+              >
+                <Icon className="h-3.5 w-3.5 text-primary" />
+                {label}
+              </a>
+            ))}
+          </div>
+        )}
+
         {isOwner ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={deleting}
-            onClick={() => {
-              if (window.confirm(t('deleteConfirm'))) void deletePage()
-            }}
-            className="text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="h-4 w-4" />
-            {t('delete')}
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/pages/${page.id}/settings`}>
+              <Settings className="h-4 w-4" />
+              {t('settingsButton')}
+            </Link>
           </Button>
         ) : (
           <PageFollowButton

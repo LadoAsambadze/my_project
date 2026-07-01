@@ -17,7 +17,7 @@ export const POST_FIELDS = gql`
     page {
       id
       name
-      type
+      types
       photoUrl
     }
     media {

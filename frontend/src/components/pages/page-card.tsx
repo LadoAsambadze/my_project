@@ -13,7 +13,6 @@ interface PageCardProps {
 export function PageCard({ page }: PageCardProps) {
   const tt = useTranslations('pageTypes')
   const tp = useTranslations('pages')
-  const TypeIcon = PAGE_TYPE_ICONS[page.type]
 
   return (
     <Link
@@ -23,9 +22,16 @@ export function PageCard({ page }: PageCardProps) {
       <Avatar src={page.photoUrl} name={page.name} size="md" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{page.name}</p>
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <TypeIcon className="h-3.5 w-3.5 shrink-0" />
-          {tt(page.type)}
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+          {page.types.map((type) => {
+            const Icon = PAGE_TYPE_ICONS[type]
+            return (
+              <span key={type} className="inline-flex items-center gap-1">
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {tt(type)}
+              </span>
+            )
+          })}
         </p>
       </div>
       <div className="shrink-0 text-right text-xs text-muted-foreground">

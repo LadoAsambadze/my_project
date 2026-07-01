@@ -20,11 +20,27 @@ enum MediaType {
   VIDEO
 }
 
-/// Thematic category a Page belongs to. For now there is a single type;
-/// the enum is kept so more categories can be added later without reshaping
-/// the schema.
+/// Thematic category a Page belongs to — the kind of event vendor it is.
+/// Extend by adding values here, to the frontend PageType union + catalogs,
+/// and to the `pageTypes` i18n namespace.
 enum PageType {
-  PHOTOGRAPHER
+  PHOTOGRAPHER // shows their photo/video work via posts
+  DESIGNER // uploads event decor designs (weddings, birthdays, ...)
+  CATERING // furshet / buffet catering for events
+  FLORIST // flowers and arrangements for events
+  MUSIC_SOUND // music, sound & light: performers, DJs, and sound/light rentals
+}
+
+/// Category of an Event. Each type may later carry its own extra fields; for
+/// now it's just a label. Extend by adding values here, the EventType GraphQL
+/// enum (event.model.ts), and the `eventTypes` i18n namespace.
+enum EventType {
+  PARTY
+  BIRTHDAY
+  SPORT
+  HIKING
+  CAMPING
+  OTHER
 }
 
 model User {
@@ -59,25 +75,134 @@ model User {
   posts       Post[]
   pages       Page[] // thematic pages this user owns (Facebook-style Pages)
   pageFollows PageFollow[] @relation("UserPageFollows") // pages this user follows
+  events      Event[] // events this user hosts (personal, or as one of their pages)
+  comments    Comment[] // comments this user wrote (on posts or designs)
 }
 
 /// A user-owned, thematic page (like a Facebook Page). For now it carries only
 /// a name, a type, and an optional photo. A page posts just like a user does:
 /// its posts live in `posts` (Post rows with this page's id in `pageId`).
 model Page {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
-  type      PageType @default(PHOTOGRAPHER)
-  photoUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  types       PageType[] // one or more vendor categories; always at least one (enforced in the service)
+  photoUrl    String?
+  phone       String? // contact phone, rendered as a tel: link
+  whatsapp    String? // WhatsApp number in international format (wa.me link)
+  telegram    String? // Telegram username without the @ (t.me link)
+  instruments String[] // what a MUSICIAN page plays (ids from the frontend MUSIC_KINDS catalog, e.g. "SAXOPHONE")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  posts     Post[]
-  followers PageFollow[] @relation("PageFollowers")
+  posts          Post[]
+  followers      PageFollow[] @relation("PageFollowers")
+  events         Event[] // events hosted by this page
+  designs        Design[] // portfolio designs (DESIGNER pages only)
+  cateringOffers CateringOffer[] // menu offers (CATERING pages only)
+  offerings      Offering[] // bookable services (MUSICIAN and EQUIPMENT pages)
 
   @@index([ownerId])
+}
+
+/// A bookable service published by a MUSICIAN or EQUIPMENT page: a performer
+/// selling an act (saxophone player, DJ set, folk ensemble) or a rental
+/// listing (sound system, lighting). `kind` is a label from the frontend
+/// catalog (e.g. "SAXOPHONE", "SOUND_SYSTEM"), mirroring Design.occasion.
+/// `priceFrom` is an optional starting price in GEL.
+model Offering {
+  id          String          @id @default(cuid())
+  pageId      String
+  page        Page            @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title       String
+  kind        String
+  description String?
+  priceFrom   Int?
+  images      OfferingImage[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([pageId, createdAt])
+  @@index([kind, createdAt])
+}
+
+/// A single photo of an offering, in upload order.
+model OfferingImage {
+  id         String   @id @default(cuid())
+  offeringId String
+  offering   Offering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  url        String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([offeringId])
+}
+
+/// A menu offer published by a CATERING page: one package it sells (furshet
+/// set, banquet menu, coffee break, ...). `kind` is a label from the frontend
+/// catalog (e.g. "FURSHET"), mirroring Design.occasion. `pricePerPerson` is an
+/// optional per-guest price in GEL — the convention catering is priced in.
+model CateringOffer {
+  id             String               @id @default(cuid())
+  pageId         String
+  page           Page                 @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title          String
+  kind           String
+  description    String?
+  pricePerPerson Int?
+  images         CateringOfferImage[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([pageId, createdAt])
+  @@index([kind, createdAt])
+}
+
+/// A single photo of a catering offer, in upload order.
+model CateringOfferImage {
+  id        String        @id @default(cuid())
+  offerId   String
+  offer     CateringOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  @@index([offerId])
+}
+
+/// A portfolio item uploaded by a DESIGNER page: one decor setup the page
+/// offers (wedding arch, birthday backdrop, ...). `occasion` is a label from
+/// the frontend catalog (e.g. "WEDDING"), mirroring how Event.subtype works.
+/// `priceFrom` is an optional starting price in GEL.
+model Design {
+  id          String        @id @default(cuid())
+  pageId      String
+  page        Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title       String
+  occasion    String
+  description String?
+  priceFrom   Int?
+  images      DesignImage[]
+  comments    Comment[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([pageId, createdAt])
+  @@index([occasion, createdAt])
+}
+
+/// A single photo of a design, in upload order (`order` is the position the
+/// uploader arranged them in).
+model DesignImage {
+  id        String   @id @default(cuid())
+  designId  String
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([designId])
 }
 
 /// A directed follow edge from a user to a page. One row per (follower, page),
@@ -106,6 +231,7 @@ model Post {
   page      Page?       @relation(fields: [pageId], references: [id], onDelete: Cascade)
   body      String?
   media     PostMedia[]
+  comments  Comment[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -125,6 +251,50 @@ model PostMedia {
   createdAt DateTime  @default(now())
 
   @@index([postId])
+}
+
+/// An event hosted by a user or one of their pages. Ownership mirrors Post:
+/// `author` is always the creating user; `pageId` is set when the event is
+/// hosted *as* that page (the author must own it), and null for a personal
+/// event. `startsAt` is when the event takes place. RSVP/attendance is
+/// intentionally not modeled yet.
+model Event {
+  id          String   @id @default(cuid())
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  pageId      String?
+  page        Page?     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title       String
+  type        EventType @default(OTHER)
+  subtype     String? // second-level category within `type` (e.g. "TENNIS" for SPORT); catalog lives in the frontend
+  description String?
+  location    String?
+  coverUrl    String?
+  startsAt    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([authorId, startsAt])
+  @@index([pageId, startsAt])
+}
+
+/// A comment written by a user on a post or on a design — exactly one of
+/// `postId` / `designId` is set (enforced in the service). On vendor content
+/// comments double as public questions/offers ("does the price include
+/// setup?"), so they attach to designs the same way they attach to posts.
+model Comment {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  designId  String?
+  design    Design?  @relation(fields: [designId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([postId, createdAt])
+  @@index([designId, createdAt])
 }
 
 /// A directed follow edge: `follower` follows `following`. One row per pair

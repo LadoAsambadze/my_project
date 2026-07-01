@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Page, PageType } from '@prisma/client';
+import { Page } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePageInput } from './dto/create-page.input';
+import { UpdatePageInput } from './dto/update-page.input';
 
 // Every page we return carries its owner (for the "created by" line).
 const pageInclude = { owner: true } as const;
@@ -15,14 +16,48 @@ const pageInclude = { owner: true } as const;
 export class PagesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Create a page owned by `ownerId`. Type defaults to PHOTOGRAPHER. */
+  /** Create a page owned by `ownerId` with one or more vendor categories. */
   create(ownerId: string, input: CreatePageInput) {
     return this.prisma.page.create({
       data: {
         ownerId,
         name: input.name.trim(),
-        type: input.type ?? PageType.PHOTOGRAPHER,
+        types: [...new Set(input.types)],
         photoUrl: input.photoUrl?.trim() || null,
+      },
+      include: pageInclude,
+    });
+  }
+
+  /**
+   * Update one of `ownerId`'s pages. Omitted fields keep their value; the
+   * nullable text fields (photo, contacts) treat an empty string as "clear".
+   * The telegram handle is stored without a leading @.
+   */
+  async update(ownerId: string, input: UpdatePageInput) {
+    await this.assertOwned(ownerId, input.pageId);
+    return this.prisma.page.update({
+      where: { id: input.pageId },
+      data: {
+        name: input.name?.trim(),
+        types: input.types ? [...new Set(input.types)] : undefined,
+        photoUrl:
+          input.photoUrl === undefined
+            ? undefined
+            : input.photoUrl.trim() || null,
+        phone:
+          input.phone === undefined ? undefined : input.phone.trim() || null,
+        whatsapp:
+          input.whatsapp === undefined
+            ? undefined
+            : input.whatsapp.trim() || null,
+        telegram:
+          input.telegram === undefined
+            ? undefined
+            : input.telegram.trim().replace(/^@/, '') || null,
+        instruments: input.instruments
+          ? [...new Set(input.instruments)]
+          : undefined,
       },
       include: pageInclude,
     });

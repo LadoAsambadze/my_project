@@ -8,6 +8,10 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { PostsModule } from './posts/posts.module';
 import { PagesModule } from './pages/pages.module';
+import { EventsModule } from './events/events.module';
+import { DesignsModule } from './designs/designs.module';
+import { CateringModule } from './catering/catering.module';
+import { OfferingsModule } from './offerings/offerings.module';
 
 @Module({
   imports: [
@@ -31,6 +35,10 @@ import { PagesModule } from './pages/pages.module';
     AuthModule,
     PagesModule,
     PostsModule,
+    EventsModule,
+    DesignsModule,
+    CateringModule,
+    OfferingsModule,
   ],
 })
 export class AppModule {}

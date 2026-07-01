@@ -5,10 +5,12 @@ import { useTranslations } from 'next-intl'
 import { useQuery } from '@apollo/client/react'
 import { USER_PROFILE_QUERY } from '@/graphql/users/queries'
 import { USER_POSTS_QUERY } from '@/graphql/posts/queries'
+import { USER_EVENTS_QUERY } from '@/graphql/events/queries'
 import { useAuth } from '@/lib/auth/auth-context'
-import type { AuthUser, Post } from '@/graphql/types'
+import type { AuthUser, EventItem, Post } from '@/graphql/types'
 import { ProfileCard } from '@/components/profile/profile-card'
 import { FollowButton } from '@/components/profile/follow-button'
+import { EventComposer } from '@/components/events/event-composer'
 import { ProfileTabs } from '@/components/posts/profile-tabs'
 
 interface UserProfileData {
@@ -17,6 +19,10 @@ interface UserProfileData {
 
 interface UserPostsData {
   userPosts: Post[]
+}
+
+interface UserEventsData {
+  userEvents: EventItem[]
 }
 
 export default function UserProfilePage() {
@@ -44,6 +50,13 @@ export default function UserProfilePage() {
     },
   )
 
+  const { data: eventsData, refetch: refetchEvents } =
+    useQuery<UserEventsData>(USER_EVENTS_QUERY, {
+      variables: { username },
+      skip: !username,
+      fetchPolicy: 'cache-and-network',
+    })
+
   if (loading && !data?.user) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -63,6 +76,7 @@ export default function UserProfilePage() {
   const profile = data.user
   const isSelf = me?.id === profile.id
   const posts = postsData?.userPosts ?? []
+  const events = eventsData?.userEvents ?? []
 
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
@@ -91,9 +105,16 @@ export default function UserProfilePage() {
         <section>
           <ProfileTabs
             posts={posts}
+            events={events}
             currentUserId={me?.id}
             emptyPostsLabel={tp('empty')}
             onDeleted={() => void refetch()}
+            onEventDeleted={() => void refetchEvents()}
+            eventComposer={
+              isSelf ? (
+                <EventComposer onCreated={() => void refetchEvents()} />
+              ) : undefined
+            }
           />
         </section>
       </div>
